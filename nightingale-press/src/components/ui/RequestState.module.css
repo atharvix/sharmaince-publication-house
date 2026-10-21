@@ -1,0 +1,35 @@
+.wrap {
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+  color: var(--color-ink-500);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary-100);
+  border-top-color: var(--color-primary-700);
+  margin: 0 auto var(--space-4);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorWrap {
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+  border: 1px dashed var(--color-error);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.errorIcon {
+  font-size: 1.75rem;
+  margin-bottom: var(--space-3);
+}

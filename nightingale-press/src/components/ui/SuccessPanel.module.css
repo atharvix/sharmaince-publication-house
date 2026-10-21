@@ -1,0 +1,43 @@
+.panel {
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  animation: fadeIn var(--duration-base) var(--ease-out);
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  display: grid;
+  place-items: center;
+  margin: 0 auto var(--space-4);
+  font-size: 1.5rem;
+  animation: pop var(--duration-slow) var(--ease-out);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.title {
+  font-size: var(--fs-lg);
+}
+
+.body {
+  margin-top: var(--space-3);
+  max-width: 48ch;
+  margin-inline: auto;
+}
+
+.action {
+  margin-top: var(--space-5);
+}

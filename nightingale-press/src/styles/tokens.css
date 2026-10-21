@@ -1,0 +1,91 @@
+:root {
+  /* Brand color — deep pine/teal, evokes clinical trust without the cliché of pure medical blue */
+  --color-primary-900: #0a3836;
+  --color-primary-700: #0e5c56;
+  --color-primary-600: #136f67;
+  --color-primary-500: #1b8278;
+  --color-primary-100: #e4efec;
+  --color-primary-50: #f1f7f5;
+
+  /* Accent — warm amber, used sparingly for calls to action and highlights */
+  --color-accent-700: #a46a1f;
+  --color-accent-600: #c6872c;
+  --color-accent-500: #d99a3c;
+  --color-accent-100: #faebd2;
+
+  /* Neutrals — warm paper tones rather than stark gray, for an editorial feel */
+  --color-ink-900: #15211e;
+  --color-ink-700: #35433f;
+  --color-ink-500: #5c6b66;
+  --color-ink-300: #93a39d;
+  --color-paper-0: #ffffff;
+  --color-paper-50: #fbf8f2;
+  --color-paper-100: #f4efe3;
+  --color-paper-200: #e9e1cf;
+  --color-border: #e1d9c6;
+
+  /* Semantic */
+  --color-success: #2f7d4f;
+  --color-success-bg: #e9f5ee;
+  --color-error: #b3432b;
+  --color-error-bg: #fbece7;
+  --color-focus-ring: #1b8278;
+
+  /* Typography */
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+  --fs-3xl: 3rem;
+  --fs-4xl: 3.75rem;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-full: 999px;
+
+  /* Shadow — warm-tinted, soft, never pure black */
+  --shadow-sm: 0 1px 2px rgba(21, 33, 30, 0.06), 0 1px 1px rgba(21, 33, 30, 0.04);
+  --shadow-md: 0 8px 24px -8px rgba(21, 33, 30, 0.18);
+  --shadow-lg: 0 20px 48px -12px rgba(21, 33, 30, 0.22);
+  --shadow-focus: 0 0 0 3px rgba(27, 130, 120, 0.3);
+
+  /* Motion — subtle and quick, never showy */
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 450ms;
+  --duration-reveal: 650ms;
+
+  --container-max: 1200px;
+  --header-height: 76px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-reveal: 0ms;
+  }
+}

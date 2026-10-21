@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum BookFormat {
+  PAPERBACK
+  HARDBOUND
+  EBOOK
+}
+
+enum BookStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Availability {
+  IN_STOCK
+  PRE_ORDER
+  OUT_OF_STOCK
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENT
+  FLAT
+}
+
+enum BulkOrderStatus {
+  SUBMITTED
+  ASSIGNED
+  QUOTE_IN_PROGRESS
+  QUOTE_SENT
+  ACCEPTED
+  DECLINED
+  FULFILLED
+  CLOSED
+}
+
+enum AuthorApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  INFO_REQUESTED
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  CLOSED
+}
+
+enum FaqTopic {
+  ORDERS
+  DELIVERY
+  RETURNS
+  SUBMISSIONS
+  ACCOUNTS
+}
+
+// ---------- Identity ----------
+
+model User {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  passwordHash           String
+  name                   String
+  role                   Role      @default(CUSTOMER)
+  isActive               Boolean   @default(true)
+  passwordResetToken     String?   @unique
+  passwordResetExpires   DateTime?
+  refreshTokenVersion    Int       @default(0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  addresses              Address[]
+  wishlistItems          WishlistItem[]
+  orders                 Order[]
+  auditEvents            AuditEvent[]        @relation("AuditActor")
+  assignedBulkOrders     BulkOrderRequest[]  @relation("BulkOrderAssignee")
+  authorApplicationNotes AuthorApplicationNote[]
+  contentEdits           ContentPage[]       @relation("ContentEditor")
+
+  @@index([role])
+}
+
+model Address {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label             String
+  fullName          String
+  phone             String
+  line1             String
+  line2             String?
+  city              String
+  state             String
+  postalCode        String
+  country           String   @default("India")
+  isDefaultShipping Boolean  @default(false)
+  isDefaultBilling  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ---------- Catalogue ----------
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  books Book[]
+}
+
+model Author {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  credentials String
+  bio         String
+  books       BookAuthor[]
+}
+
+model Book {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  subtitle      String?
+  categoryId    String
+  category      Category      @relation(fields: [categoryId], references: [id])
+  authors       BookAuthor[]
+  priceMinor    Int
+  currency      String        @default("INR")
+  edition       String
+  format        BookFormat
+  isbn          String        @unique
+  pages         Int
+  status        BookStatus    @default(PUBLISHED)
+  availability  Availability  @default(IN_STOCK)
+  stockQuantity Int           @default(0)
+  description   String
+  highlights    Json
+  coverPalette  String        @default("pine")
+  coverImageUrl String?
+  featured      Boolean       @default(false)
+  newRelease    Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  wishlistItems WishlistItem[]
+  orderItems    OrderItem[]
+
+  @@index([status])
+  @@index([categoryId])
+}
+
+model BookAuthor {
+  bookId   String
+  authorId String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+}
+
+// ---------- Commerce ----------
+
+model Promotion {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  description      String
+  discountType     DiscountType
+  discountValue    Int
+  minSpendMinor    Int?
+  maxRedemptions   Int?
+  redeemedCount    Int          @default(0)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  orders           Order[]
+}
+
+model Order {
+  id               String       @id @default(cuid())
+  orderNumber      String       @unique
+  userId           String
+  user             User         @relation(fields: [userId], references: [id])
+  status           OrderStatus  @default(PENDING_PAYMENT)
+  items            OrderItem[]
+  payments         Payment[]
+
+  subtotalMinor    Int
+  shippingMinor    Int          @default(0)
+  discountMinor    Int          @default(0)
+  taxMinor         Int          @default(0)
+  totalMinor       Int
+  currency         String       @default("INR")
+
+  promotionId      String?
+  promotion        Promotion?   @relation(fields: [promotionId], references: [id])
+
+  shippingAddress  Json
+  billingAddress   Json?
+
+  trackingCarrier  String?
+  trackingNumber   String?
+  trackingUrl      String?
+
+  placedAt         DateTime     @default(now())
+  paidAt           DateTime?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+  cancelledAt      DateTime?
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id               String  @id @default(cuid())
+  orderId          String
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId           String
+  book             Book    @relation(fields: [bookId], references: [id])
+  titleSnapshot    String
+  authorSnapshot   String
+  priceMinorSnapshot Int
+  quantity         Int
+  lineTotalMinor   Int
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider          String        @default("razorpay")
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  status            PaymentStatus @default(CREATED)
+  amountMinor       Int
+  currency          String        @default("INR")
+  rawPayload        Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+model PaymentWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  payload     Json
+  processedAt DateTime @default(now())
+}
+
+// ---------- Institutional & author workflows ----------
+
+model BulkOrderRequest {
+  id                  String          @id @default(cuid())
+  organizationName    String
+  organizationType    String
+  contactName         String
+  email               String
+  phone               String
+  deliveryLocation    String
+  titlesOfInterest    String?
+  notes               String?
+  status              BulkOrderStatus @default(SUBMITTED)
+  assignedToUserId    String?
+  assignedTo          User?           @relation("BulkOrderAssignee", fields: [assignedToUserId], references: [id])
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model AuthorApplication {
+  id           String                   @id @default(cuid())
+  name         String
+  email        String
+  subjectArea  String
+  workingTitle String
+  synopsis     String
+  status       AuthorApplicationStatus  @default(SUBMITTED)
+  notes        AuthorApplicationNote[]
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+}
+
+model AuthorApplicationNote {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   AuthorApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  authorUserId  String
+  authorUser    User              @relation(fields: [authorUserId], references: [id])
+  note          String
+  createdAt     DateTime          @default(now())
+}
+
+// ---------- Content & support ----------
+
+model ContentPage {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  intro         String?
+  sections      Json
+  isPublished   Boolean  @default(true)
+  updatedByUserId String?
+  updatedBy     User?    @relation("ContentEditor", fields: [updatedByUserId], references: [id])
+  updatedAt     DateTime @updatedAt
+}
+
+model Faq {
+  id          String   @id @default(cuid())
+  topic       FaqTopic
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  reason    String
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ---------- Audit ----------
+
+model AuditEvent {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actor        User?    @relation("AuditActor", fields: [actorUserId], references: [id])
+  action       String
+  entityType   String
+  entityId     String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, entityId])
+}

@@ -1,0 +1,147 @@
+.footer {
+  background: var(--color-primary-900);
+  color: var(--color-paper-100);
+  margin-top: var(--space-10);
+}
+
+.top {
+  padding-block: var(--space-9) var(--space-7);
+  display: grid;
+  gap: var(--space-7);
+  grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+}
+
+@media (max-width: 860px) {
+  .top {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .top {
+    grid-template-columns: 1fr;
+  }
+}
+
+.brandCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--color-paper-0);
+}
+
+.mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-500);
+  color: var(--color-primary-900);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.tagline {
+  color: var(--color-primary-100);
+  font-size: var(--fs-sm);
+  max-width: 32ch;
+}
+
+.heading {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-500);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.link {
+  font-size: var(--fs-sm);
+  color: var(--color-primary-100);
+  transition: color var(--duration-fast) var(--ease-standard),
+    padding-left var(--duration-fast) var(--ease-standard);
+}
+
+.link:hover {
+  color: var(--color-paper-0);
+  padding-left: var(--space-1);
+}
+
+.newsletterForm {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.newsletterInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-paper-0);
+  font-size: var(--fs-sm);
+}
+
+.newsletterInput::placeholder {
+  color: var(--color-primary-100);
+  opacity: 0.6;
+}
+
+.newsletterInput:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+.newsletterNote {
+  font-size: var(--fs-xs);
+  color: var(--color-primary-100);
+  opacity: 0.8;
+}
+
+.successNote {
+  font-size: var(--fs-sm);
+  color: var(--color-accent-500);
+  font-weight: 600;
+  animation: fadeIn var(--duration-base) var(--ease-out);
+}
+
+.bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-block: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  color: var(--color-primary-100);
+}
+
+.bottomLinks {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.bottomLinks a:hover {
+  color: var(--color-paper-0);
+}

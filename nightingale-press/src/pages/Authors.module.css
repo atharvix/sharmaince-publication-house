@@ -1,0 +1,93 @@
+.section {
+  padding-block: var(--space-8) var(--space-9);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.card {
+  padding: var(--space-6);
+  background: var(--color-paper-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(155deg, var(--color-primary-500), var(--color-primary-900));
+  color: var(--color-paper-0);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  margin-bottom: var(--space-4);
+}
+
+.name {
+  font-size: var(--fs-md);
+}
+
+.credentials {
+  margin-top: var(--space-1);
+  font-size: var(--fs-xs);
+  color: var(--color-primary-700);
+  font-weight: 600;
+}
+
+.bio {
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.bookLinks {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bookChip {
+  font-size: var(--fs-xs);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-weight: 600;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.bookChip:hover {
+  background: var(--color-primary-100);
+}
+
+.ctaBand {
+  margin-top: var(--space-9);
+  text-align: center;
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-50);
+}
+
+.ctaTitle {
+  font-size: var(--fs-2xl);
+  margin-bottom: var(--space-3);
+}
+
+.ctaBody {
+  max-width: 54ch;
+  margin-inline: auto;
+  margin-bottom: var(--space-6);
+}

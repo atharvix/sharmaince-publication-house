@@ -1,0 +1,44 @@
+.wrap {
+  max-width: 640px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  margin-bottom: var(--space-3);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 2px;
+  background: var(--color-accent-600);
+  border-radius: var(--radius-full);
+}
+
+.title {
+  font-size: var(--fs-2xl);
+}
+
+@media (min-width: 760px) {
+  .title {
+    font-size: var(--fs-3xl);
+  }
+}
+
+.subtitle {
+  margin-top: var(--space-4);
+  font-size: var(--fs-md);
+  color: var(--color-ink-500);
+}
+
+.center {
+  margin-inline: auto;
+  text-align: center;
+}

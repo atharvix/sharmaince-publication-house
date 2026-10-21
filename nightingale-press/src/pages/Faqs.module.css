@@ -1,0 +1,38 @@
+.layout {
+  padding-block: var(--space-8) var(--space-9);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-7);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-ink-700);
+  background: var(--color-paper-0);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.tab:hover {
+  border-color: var(--color-primary-500);
+}
+
+.tabActive {
+  background: var(--color-primary-700);
+  border-color: var(--color-primary-700);
+  color: var(--color-paper-0);
+}
+
+.list {
+  max-width: 760px;
+}
