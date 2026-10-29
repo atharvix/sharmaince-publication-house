@@ -48,6 +48,9 @@ docker compose up --build   # site on http://localhost:8080; nginx proxies /api 
 
 ## Deploying to production
 
+Step-by-step guide for a single Ubuntu server with free HTTPS via Tailscale Funnel: **[DEPLOY.md](DEPLOY.md)**.
+
+
 - `NODE_ENV=production` makes the API refuse to start unless Razorpay keys, the webhook secret and SMTP are configured, the JWT secrets are 32+ characters and distinct, and `PUBLIC_WEB_URL` is https. There is no way to boot production into simulated payments or console email.
 - Run migrations as a release step (`npm run prisma:deploy`, or the compose `migrate` service), not on container start.
 - Create the first administrator without seeding demo accounts: `ADMIN_EMAIL=… ADMIN_NAME=… ADMIN_PASSWORD=… npm run create-admin`.
