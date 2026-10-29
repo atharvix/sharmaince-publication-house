@@ -48,7 +48,7 @@ docker compose up --build   # site on http://localhost:8080; nginx proxies /api 
 
 ## Deploying to production
 
-Step-by-step guide for a single Ubuntu server with free HTTPS via Tailscale Funnel: **[DEPLOY.md](DEPLOY.md)**.
+Step-by-step guide for a single Ubuntu server behind a Cloudflare Tunnel on your own domain: **[DEPLOY.md](DEPLOY.md)**.
 
 
 - `NODE_ENV=production` makes the API refuse to start unless Razorpay keys, the webhook secret and SMTP are configured, the JWT secrets are 32+ characters and distinct, and `PUBLIC_WEB_URL` is https. There is no way to boot production into simulated payments or console email.
