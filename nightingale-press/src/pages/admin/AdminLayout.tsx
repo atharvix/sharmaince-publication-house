@@ -16,6 +16,7 @@ interface NavItem {
 const LINKS: NavItem[] = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/books', label: 'Books' },
+  { to: '/admin/hero', label: 'Home hero' },
   { to: '/admin/authors', label: 'Authors' },
   { to: '/admin/orders', label: 'Orders' },
   { to: '/admin/bulk-orders', label: 'Bulk Orders' },

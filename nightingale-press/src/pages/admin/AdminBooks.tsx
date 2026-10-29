@@ -153,8 +153,6 @@ export default function AdminBooks() {
       highlights,
       featured: form.get('featured') === 'on',
       newRelease: form.get('newRelease') === 'on',
-      heroOrder: form.get('heroOrder') ? Number(form.get('heroOrder')) : null,
-      heroNote: String(form.get('heroNote') || '').trim() || null,
     };
 
     setSaving(true);
@@ -313,31 +311,6 @@ export default function AdminBooks() {
             </label>
           </div>
 
-          <fieldset className="form-grid form-grid--2" style={{ marginTop: 'var(--space-4)', border: 0, padding: 0 }}>
-            <SelectField
-              id="b-hero-order"
-              name="heroOrder"
-              label="Home page hero"
-              defaultValue={editing?.heroOrder ?? ''}
-              hint="Up to 5 books, shown in this order. With none picked, new releases are shown."
-            >
-              <option value="">Not in the hero</option>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  Position {n}
-                </option>
-              ))}
-            </SelectField>
-            <InputField
-              id="b-hero-note"
-              name="heroNote"
-              label="Hero note"
-              maxLength={40}
-              defaultValue={editing?.heroNote ?? ''}
-              placeholder="e.g. Revised INC syllabus"
-              hint="Handwritten beside the cover. Leave empty to show price and pages."
-            />
-          </fieldset>
 
           <div style={{ marginTop: 'var(--space-4)' }}>
             <TextareaField id="b-description" name="description" label="Description" required defaultValue={editing?.description ?? draft?.description} />

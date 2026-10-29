@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction D — Study Zine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Kalam:wght@400;700&family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fffdf7;
+    --ink: #121014;
+    --pink: #ff2d87;      /* highlighter pink: the loud one */
+    --yellow: #ffe23d;    /* highlighter yellow */
+    --green: #3ee07a;     /* highlighter green */
+    --blue: #3d7bff;
+    --muted: #4c4650;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  ::selection { background: var(--yellow); }
+  body { background: var(--paper); color: var(--ink); font: 400 17px/1.5 "Figtree", system-ui, sans-serif; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  .hand { font-family: "Kalam", cursive; }
+
+  header { display: flex; align-items: center; gap: 28px; padding: 14px 32px; border-bottom: 3px solid var(--ink); background: #fff; position: relative; z-index: 3; }
+  .mark { font-family: "Dela Gothic One"; font-size: 22px; letter-spacing: .01em; }
+  .mark span { background: var(--yellow); padding: 0 6px; }
+  nav { display: flex; gap: 22px; font-weight: 800; font-size: 15px; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; border: 3px solid var(--ink); border-radius: 999px; height: 42px; padding: 0 16px; width: 300px; color: var(--muted); font-weight: 600; font-size: 15px; background: #fff; }
+  .cart { font-weight: 800; border: 3px solid var(--ink); border-radius: 999px; height: 42px; padding: 0 16px; display: flex; align-items: center; gap: 8px; background: var(--green); }
+
+  .spread { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 24px; padding: 40px 32px 28px; max-width: 1360px; margin: 0 auto; }
+  h1 { font-family: "Dela Gothic One"; font-weight: 400; font-size: 92px; line-height: .98; letter-spacing: -0.01em;
+       color: var(--pink); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill;
+       text-shadow: 6px 6px 0 var(--yellow), 6px 6px 0 var(--ink); }
+  h1 em { font-style: normal; color: #fff; }
+  .lede { margin-top: 22px; font-size: 20px; max-width: 34ch; font-weight: 600; }
+  .lede mark { background: linear-gradient(transparent 55%, var(--yellow) 55%); padding: 0 2px; }
+
+  .doors { margin-top: 28px; display: grid; gap: 12px; max-width: 520px; }
+  .door { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border: 3px solid var(--ink); border-radius: 16px; background: #fff; font-weight: 800; font-size: 20px; box-shadow: 0 6px 0 var(--ink); transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s; }
+  .door small { display: block; font: 700 18px "Kalam"; color: var(--muted); }
+  .door:hover { transform: translateY(-3px) rotate(-.6deg); box-shadow: 0 9px 0 var(--ink); }
+  .door:nth-child(1) { background: var(--pink); color: #fff; } .door:nth-child(1) small { color: #ffe3ef; }
+  .door .go { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: var(--yellow); display: grid; place-items: center; flex: none; color: var(--ink); }
+
+  /* The cut-out pile: covers shingled like figures on a magazine spread */
+  .pile { position: relative; min-height: 560px; }
+  .cut { position: absolute; width: 210px; aspect-ratio: 3/4; border-radius: 6px; border: 3px solid var(--ink); background: #fff; box-shadow: 0 0 0 7px #fff, 0 0 0 10px var(--ink), 10px 14px 0 10px rgba(18,16,20,.14); display: flex; flex-direction: column; overflow: hidden; transition: transform .35s cubic-bezier(.16,1,.3,1); }
+  .cut:hover { transform: translateY(-10px) rotate(0deg) scale(1.04) !important; z-index: 9; }
+  .cut .band { height: 54px; display: flex; align-items: flex-end; padding: 8px 12px; color: #fff; font: 400 15px "Dela Gothic One"; }
+  .cut .t { padding: 10px 12px 0; font-weight: 800; font-size: 19px; line-height: 1.12; }
+  .cut .a { padding: 6px 12px; font-size: 13px; color: var(--muted); }
+  .c1 { left: 4%; top: 40px; transform: rotate(-7deg); z-index: 2; } .c1 .band { background: var(--blue); }
+  .c2 { left: 32%; top: 6px; transform: rotate(4deg); z-index: 3; } .c2 .band { background: var(--pink); }
+  .c3 { left: 58%; top: 70px; transform: rotate(-3deg); z-index: 2; } .c3 .band { background: #10a85a; }
+  .c4 { left: 20%; top: 300px; transform: rotate(5deg); z-index: 4; } .c4 .band { background: #7a3cff; }
+  .c5 { left: 50%; top: 320px; transform: rotate(-5deg); z-index: 3; } .c5 .band { background: #ff7a1a; }
+
+  .call { position: absolute; z-index: 8; font: 700 21px/1.05 "Kalam"; white-space: nowrap; }
+  .call svg { position: absolute; overflow: visible; }
+  .burst { position: absolute; z-index: 9; width: 92px; height: 92px; display: grid; place-items: center; font: 400 15px/1 "Dela Gothic One"; text-align: center; color: var(--ink); transform: rotate(12deg); }
+  .burst::before { content: ""; position: absolute; inset: 0; background: var(--yellow); border: 3px solid var(--ink); clip-path: polygon(50% 0, 61% 20%, 84% 9%, 80% 33%, 100% 42%, 82% 58%, 92% 82%, 68% 78%, 58% 100%, 44% 81%, 21% 93%, 22% 68%, 0 58%, 17% 42%, 6% 19%, 30% 22%); }
+  .burst span { position: relative; }
+
+  .strip { max-width: 1360px; margin: 0 auto; padding: 8px 32px 48px; }
+  .strip h2 { font: 400 30px "Dela Gothic One"; display: inline-block; background: var(--green); border: 3px solid var(--ink); padding: 4px 14px; transform: rotate(-1.5deg); }
+  .subjects { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { border: 3px solid var(--ink); border-radius: 999px; padding: 8px 16px; font-weight: 800; background: #fff; display: flex; align-items: center; gap: 10px; }
+  .chip i { font-style: normal; font: 700 18px "Kalam"; color: var(--muted); }
+  .chip:hover { background: var(--yellow); }
+
+  @media (max-width: 760px) {
+    header { padding: 12px 16px; gap: 12px; } nav, .search { display: none; } .cart { margin-left: auto; white-space: nowrap; height: 38px; padding: 0 12px; } .mark { font-size: 19px; white-space: nowrap; } .mark span { display: none; }
+    .spread { grid-template-columns: 1fr; padding: 24px 16px; }
+    h1 { font-size: 54px; -webkit-text-stroke: 2px var(--ink); text-shadow: 4px 4px 0 var(--yellow); }
+    .pile { min-height: 470px; } .cut { width: 150px; } .cut .t { font-size: 15px; } .cut .band { height: 40px; font-size: 13px; }
+    .c1 { left: 0; top: 30px; } .c2 { left: 30%; top: 0; } .c3 { left: 56%; top: 50px; } .c4 { left: 10%; top: 240px; } .c5 { left: 46%; top: 255px; }
+    .call { font-size: 17px; } .hide-sm { display: none; }
+    .strip { padding: 8px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="mark" href="#">Nightingale <span>Academic Press</span></a>
+  <nav><a href="#">Books</a><a href="#">Authors</a><a href="#">Bulk orders</a><a href="#">Help</a></nav>
+  <div class="search">Search title, author, ISBN…</div>
+  <a class="cart" href="#">Cart · 0</a>
+</header>
+
+<section class="spread">
+  <div>
+    <h1>Nursing books, <em>sorted.</em></h1>
+    <p class="lede">Twelve titles across seven subjects, with the <mark>edition, pages and price</mark> right on the cover. Pick your route:</p>
+    <div class="doors">
+      <a class="door" href="#"><span><small>I'm studying</small>Find my textbook</span><span class="go"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="door" href="#"><span><small>I teach</small>Get an inspection copy</span><span class="go"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="door" href="#"><span><small>I order for a college</small>Get a bulk quote</span><span class="go"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+    </div>
+  </div>
+
+  <div class="pile" aria-label="New and featured titles">
+    <a class="cut c1" href="#"><div class="band">MED-SURG</div><div class="t">Medical-Surgical Nursing — Vol. I</div><div class="a">Dr. Ananya Rao &amp; Dr. Thomas Varghese</div></a>
+    <a class="cut c2" href="#"><div class="band">FOUNDATIONS</div><div class="t">Foundations of Nursing Practice</div><div class="a">Dr. Meera Chandrasekaran</div></a>
+    <a class="cut c3" href="#"><div class="band">COMMUNITY</div><div class="t">Community Health Nursing</div><div class="a">Prof. Daniel Fernandes</div></a>
+    <a class="cut c4" href="#"><div class="band">PHARMA</div><div class="t">Applied Pharmacology for Nurses</div><div class="a">Dr. Shalini Mehta</div></a>
+    <a class="cut c5" href="#"><div class="band">MED-SURG</div><div class="t">Medical-Surgical Nursing — Vol. II</div><div class="a">Dr. Ananya Rao &amp; Dr. Thomas Varghese</div></a>
+
+    <div class="call" style="left:-1%; top:2px; color:var(--blue)">₹1,150 · 820 pp
+      <svg style="left:60px; top:24px" width="40" height="40"><path d="M2 2 C 10 20, 20 26, 34 34" stroke="#3d7bff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>
+    <div class="call hide-sm" style="left:78%; top:20px; color:var(--pink)">₹895!
+      <svg style="left:-30px; top:22px" width="40" height="40"><path d="M36 2 C 26 16, 16 22, 2 30" stroke="#ff2d87" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>
+    <div class="call hide-sm" style="left:84%; top:300px; color:#10a85a">3rd ed.<br>548 pages</div>
+    <div class="call" style="left:2%; top:540px; color:#7a3cff">only ₹695
+      <svg style="left:96px; top:-20px" width="40" height="30"><path d="M2 28 C 16 22, 24 12, 34 2" stroke="#7a3cff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></div>
+    <div class="burst" style="left:68%; top:290px"><span>NEW<br>ED.</span></div>
+  </div>
+</section>
+
+<section class="strip">
+  <h2>Pick a subject</h2>
+  <div class="subjects">
+    <a class="chip" href="#">Anatomy &amp; Physiology <i>2</i></a>
+    <a class="chip" href="#">Community Health <i>2</i></a>
+    <a class="chip" href="#">Medical-Surgical <i>2</i></a>
+    <a class="chip" href="#">Mental Health Nursing <i>1</i></a>
+    <a class="chip" href="#">Nursing Foundations <i>2</i></a>
+    <a class="chip" href="#">Paramedical Sciences <i>1</i></a>
+    <a class="chip" href="#">Pharmacology <i>2</i></a>
+  </div>
+</section>
+</body>
+</html>

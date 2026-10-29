@@ -52,8 +52,6 @@ const bookSchema = z.object({
   coverPalette: z.enum(['pine', 'amber', 'clay', 'slate']).default('pine'),
   featured: z.boolean().default(false),
   newRelease: z.boolean().default(false),
-  heroOrder: z.number().int().min(1).max(5).nullable().default(null),
-  heroNote: z.string().trim().max(40).nullable().default(null),
 });
 
 adminBooksRouter.post(
@@ -110,6 +108,43 @@ adminBooksRouter.delete(
     const book = await prisma.book.update({ where: { id: req.params.id }, data: { status: 'ARCHIVED' } });
     await recordAudit({ actorUserId: req.user!.id, action: 'BOOK_ARCHIVED', entityType: 'Book', entityId: book.id });
     res.status(204).send();
+  }),
+);
+
+// ---------- Home page hero ----------
+
+export const HERO_COLORS = ['blue', 'pink', 'green', 'purple', 'orange'] as const;
+
+const heroSchema = z.object({
+  slots: z
+    .array(
+      z.object({
+        bookId: z.string().min(1),
+        note: z.string().trim().max(40).nullable().default(null),
+        color: z.enum(HERO_COLORS).nullable().default(null),
+      }),
+    )
+    .max(5)
+    .refine((slots) => new Set(slots.map((s) => s.bookId)).size === slots.length, 'A book can only appear once'),
+});
+
+/** Replaces the whole hero: the books in `slots` take positions 1..n, every other book leaves it. */
+adminBooksRouter.put(
+  '/hero',
+  validate({ body: heroSchema }),
+  asyncHandler(async (req, res) => {
+    const { slots } = req.body as z.infer<typeof heroSchema>;
+    const found = await prisma.book.count({ where: { id: { in: slots.map((s) => s.bookId) }, status: 'PUBLISHED' } });
+    if (found !== slots.length) throw AppError.badRequest('Only published books can be shown in the hero');
+
+    await prisma.$transaction([
+      prisma.book.updateMany({ where: { heroOrder: { not: null } }, data: { heroOrder: null, heroNote: null, heroColor: null } }),
+      ...slots.map((slot, index) =>
+        prisma.book.update({ where: { id: slot.bookId }, data: { heroOrder: index + 1, heroNote: slot.note || null, heroColor: slot.color } }),
+      ),
+    ]);
+    await recordAudit({ actorUserId: req.user!.id, action: 'HERO_UPDATED', entityType: 'Book', entityId: 'hero', metadata: { slots } });
+    res.json({ slots });
   }),
 );
 
@@ -274,6 +309,7 @@ function serializeAdminBook(book: {
   newRelease: boolean;
   heroOrder: number | null;
   heroNote: string | null;
+  heroColor: string | null;
   category: { id: string; name: string; slug: string };
   authors: { author: { id: string; slug: string; name: string } }[];
 }) {
@@ -300,6 +336,7 @@ function serializeAdminBook(book: {
     newRelease: book.newRelease,
     heroOrder: book.heroOrder,
     heroNote: book.heroNote,
+    heroColor: book.heroColor,
     category: book.category,
     authors: book.authors.map((a) => a.author),
   };

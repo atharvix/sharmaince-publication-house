@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { fetchBooks, fetchCategories } from '../lib/catalogue';
 import { useFetch } from '../hooks/useFetch';
 import { formatBookPrice } from '../lib/format';
-import { subjectColor } from '../lib/subjects';
+import { HERO_INK, subjectColor } from '../lib/subjects';
 import type { Book } from '../types';
 import { BookCard } from '../components/ui/BookCard';
 import { BookCover } from '../components/ui/BookCover';
@@ -108,7 +108,11 @@ export default function Home() {
           {pile.map((book, index) => (
             <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatBookPrice(book.price)}`}>
               <BookCover book={book} />
-              <span className={`${styles.callout} ${styles[`callout${index + 1}`]} hand`} aria-hidden="true">
+              <span
+                className={`${styles.callout} ${styles[`callout${index + 1}`]} hand`}
+                style={book.heroColor ? { color: HERO_INK[book.heroColor] } : undefined}
+                aria-hidden="true"
+              >
                 {book.heroNote || annotation(book, index)}
               </span>
               {index === firstNew && (

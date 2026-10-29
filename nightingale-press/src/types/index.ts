@@ -28,6 +28,8 @@ export interface Book {
   heroOrder?: number | null;
   /** The handwritten note beside it in the hero; empty shows price and pages. */
   heroNote?: string | null;
+  /** Ink colour of that note and its arrow. */
+  heroColor?: import('./api').HeroColor | null;
 }
 
 export interface Author {

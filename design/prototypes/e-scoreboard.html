@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction E — Scoreboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  @font-face { font-family: "DSEG7"; src: url(https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2) format("woff2"); }
+  @font-face { font-family: "DSEG14"; src: url(https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG14-Classic/DSEG14Classic-Bold.woff2) format("woff2"); }
+  :root {
+    --night: #0b0b0c;
+    --panel: #141416;
+    --line: #2a2a2e;
+    --red: #ff3b30;     /* LED red: prices */
+    --amber: #ffb000;   /* editions, new */
+    --green: #2bff88;   /* in stock */
+    --ghost: #232326;   /* unlit segments */
+    --text: #f2efe9;
+    --muted: #a19d96;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  ::selection { background: var(--amber); color: #000; }
+  body { background: var(--night); color: var(--text); font: 400 17px/1.5 "Barlow", system-ui, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 28px; }
+  .cond { font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+
+  header { border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+  .mark { font: 800 22px "Barlow Condensed"; text-transform: uppercase; letter-spacing: .06em; }
+  .mark b { color: var(--amber); }
+  nav { display: flex; gap: 22px; font: 600 16px "Barlow Condensed"; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .search { margin-left: auto; height: 40px; width: 300px; border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; padding: 0 14px; color: var(--muted); font-size: 15px; background: var(--panel); }
+
+  /* A lit display: digits sit on top of their own ghost "8"s, so absence is drawn too */
+  .seg { position: relative; display: inline-block; font-family: "DSEG7"; font-style: normal; line-height: 1; }
+  .seg::before { content: attr(data-ghost); position: absolute; inset: 0; color: var(--ghost); z-index: 0; }
+  .seg span { position: relative; z-index: 1; text-shadow: 0 0 12px currentColor; }
+
+  .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; padding: 36px 0 24px; align-items: end; }
+  h1 { font: 800 88px/0.92 "Barlow Condensed"; text-transform: uppercase; letter-spacing: -0.005em; }
+  h1 .lit { color: var(--amber); text-shadow: 0 0 22px rgba(255,176,0,.45); }
+  .lede { margin-top: 16px; color: var(--muted); font-size: 19px; max-width: 46ch; }
+  .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tot { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .tot .seg { font-size: 54px; color: var(--red); }
+  .tot .cond { display: block; margin-top: 8px; font-size: 14px; color: var(--muted); }
+
+  .routes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+  .route { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); transition: border-color .2s, box-shadow .2s; }
+  .route b { font: 700 26px "Barlow Condensed"; text-transform: uppercase; letter-spacing: .02em; }
+  .route small { display: block; font-size: 14px; color: var(--muted); }
+  .route i { color: var(--amber); filter: drop-shadow(0 0 6px rgba(255,176,0,.7)); display: grid; }
+  .route:hover { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 24px -4px rgba(255,176,0,.35); }
+
+  /* The board: every title is a row, like a departures display */
+  .board { margin: 28px 0 48px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 70px 1.6fr 1fr 110px 140px 120px; align-items: center; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
+  .row.head { border-top: 0; background: #101012; font: 600 13px "Barlow Condensed"; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding-block: 10px; }
+  .row:not(.head):hover { background: #1b1b1e; }
+  .code { font: 400 18px "DSEG14"; color: var(--amber); text-shadow: 0 0 8px rgba(255,176,0,.6); }
+  .title { font-weight: 600; font-size: 18px; line-height: 1.25; }
+  .who { color: var(--muted); font-size: 15px; }
+  .ed .seg { font-size: 22px; color: var(--amber); }
+  .price .seg { font-size: 26px; color: var(--red); }
+  .stock { font: 700 15px "Barlow Condensed"; text-transform: uppercase; letter-spacing: .06em; color: var(--green); text-shadow: 0 0 8px rgba(43,255,136,.5); }
+  .stock.low { color: var(--amber); }
+  .new { display: inline-block; margin-left: 8px; font: 700 12px "Barlow Condensed"; letter-spacing: .1em; color: #000; background: var(--amber); padding: 1px 6px; border-radius: 3px; vertical-align: middle; animation: blink 1.6s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .new { animation: none; } }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 0 16px; } nav, .search { display: none; }
+    .hero { grid-template-columns: 1fr; } h1 { font-size: 56px; } .tot .seg { font-size: 36px; }
+    .routes { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 52px 1fr auto; gap: 4px 12px; } .row.head { display: none; }
+    .row .who, .row .ed { display: none; } .row .stock { grid-column: 2; }
+    .row .price { grid-row: 1 / 3; grid-column: 3; }
+  }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="mark" href="#">Nightingale <b>Academic Press</b></a>
+  <nav><a href="#">Books</a><a href="#">Authors</a><a href="#">Bulk orders</a><a href="#">Help</a></nav>
+  <div class="search">Search title, author or ISBN</div>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Every nursing title, <span class="lit">live on the board.</span></h1>
+      <p class="lede">Price, edition and stock for each book, updated the moment they change.</p>
+    </div>
+    <div class="totals">
+      <div class="tot"><i class="seg" data-ghost="88"><span>12</span></i><span class="cond">Titles</span></div>
+      <div class="tot"><i class="seg" data-ghost="8"><span>7</span></i><span class="cond">Subjects</span></div>
+      <div class="tot"><i class="seg" data-ghost="8"><span>3</span></i><span class="cond">Formats</span></div>
+    </div>
+  </section>
+
+  <section class="routes">
+    <a class="route" href="#"><span><small>Studying</small><b>Find my textbook</b></span><i><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M4 12h15M13 6l6 6-6 6"/></svg></i></a>
+    <a class="route" href="#"><span><small>Teaching</small><b>Inspection copy</b></span><i><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M4 12h15M13 6l6 6-6 6"/></svg></i></a>
+    <a class="route" href="#"><span><small>For a college</small><b>Bulk quote</b></span><i><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M4 12h15M13 6l6 6-6 6"/></svg></i></a>
+  </section>
+
+  <section class="board" aria-label="Catalogue board">
+    <div class="row head"><span>Subj</span><span>Title</span><span>Author</span><span>Edition</span><span>Price</span><span>Status</span></div>
+    <a class="row" href="#"><span class="code">MS</span><span class="title">Medical-Surgical Nursing — Vol. II<span class="new">NEW</span></span><span class="who">Dr. Ananya Rao &amp; Dr. Thomas Varghese</span><span class="ed"><i class="seg" data-ghost="8"><span>5</span></i></span><span class="price"><i class="seg" data-ghost="8888"><span>1150</span></i></span><span class="stock">In stock</span></a>
+    <a class="row" href="#"><span class="code">MS</span><span class="title">Medical-Surgical Nursing — Vol. I</span><span class="who">Dr. Ananya Rao &amp; Dr. Thomas Varghese</span><span class="ed"><i class="seg" data-ghost="8"><span>5</span></i></span><span class="price"><i class="seg" data-ghost="8888"><span>1150</span></i></span><span class="stock">In stock</span></a>
+    <a class="row" href="#"><span class="code">NF</span><span class="title">Foundations of Nursing Practice</span><span class="who">Dr. Meera Chandrasekaran</span><span class="ed"><i class="seg" data-ghost="8"><span>4</span></i></span><span class="price"><i class="seg" data-ghost="8888"><span>!895</span></i></span><span class="stock">In stock</span></a>
+    <a class="row" href="#"><span class="code">CH</span><span class="title">Community Health Nursing: Essentials for Practice</span><span class="who">Prof. Daniel Fernandes</span><span class="ed"><i class="seg" data-ghost="8"><span>3</span></i></span><span class="price"><i class="seg" data-ghost="8888"><span>!775</span></i></span><span class="stock">In stock</span></a>
+    <a class="row" href="#"><span class="code">PH</span><span class="title">Applied Pharmacology for Nurses</span><span class="who">Dr. Shalini Mehta</span><span class="ed"><i class="seg" data-ghost="8"><span>2</span></i></span><span class="price"><i class="seg" data-ghost="8888"><span>!695</span></i></span><span class="stock">In stock</span></a>
+  </section>
+</main>
+</body>
+</html>

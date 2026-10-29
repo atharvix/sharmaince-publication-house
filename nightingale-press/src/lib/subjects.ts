@@ -23,3 +23,12 @@ export function subjectColor(slug: string): string {
   return `var(--sub-${(hashSlug(slug) % BAND_COUNT) + 1})`;
 }
 
+
+/** The highlighter inks a hero note can be written in (Admin → Home hero). */
+export const HERO_INK: Record<import('../types/api').HeroColor, string> = {
+  blue: 'var(--sub-1)',
+  pink: 'var(--color-primary-700)',
+  green: 'var(--sub-4)',
+  purple: 'var(--sub-2)',
+  orange: 'var(--sub-3)',
+};

@@ -196,6 +196,8 @@ model Book {
   heroOrder     Int?
   // The handwritten note beside the cover in the hero; empty shows price and pages.
   heroNote      String?
+  // Ink colour of that note and its arrow: blue, pink, green, purple or orange.
+  heroColor     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

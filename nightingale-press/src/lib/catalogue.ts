@@ -41,6 +41,7 @@ export function mapApiBook(book: ApiBook): Book {
     newRelease: book.newRelease,
     heroOrder: book.heroOrder,
     heroNote: book.heroNote,
+    heroColor: book.heroColor,
   };
 }
 

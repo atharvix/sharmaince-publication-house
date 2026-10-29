@@ -147,6 +147,7 @@ function serializeBook(book: {
   newRelease: boolean;
   heroOrder: number | null;
   heroNote: string | null;
+  heroColor: string | null;
   category: { name: string; slug: string };
   authors: { author: { slug: string; name: string } }[];
 }) {
@@ -171,6 +172,7 @@ function serializeBook(book: {
     newRelease: book.newRelease,
     heroOrder: book.heroOrder,
     heroNote: book.heroNote,
+    heroColor: book.heroColor,
     category: book.category,
     authors: book.authors.map((a) => a.author),
   };
