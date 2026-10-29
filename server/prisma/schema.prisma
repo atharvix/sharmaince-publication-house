@@ -94,9 +94,9 @@ model User {
   name                   String
   role                   Role      @default(CUSTOMER)
   isActive               Boolean   @default(true)
-  passwordResetToken     String?   @unique
+  // SHA-256 of the emailed reset token; the raw token is never stored.
+  passwordResetTokenHash String?   @unique
   passwordResetExpires   DateTime?
-  refreshTokenVersion    Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -107,8 +107,25 @@ model User {
   assignedBulkOrders     BulkOrderRequest[]  @relation("BulkOrderAssignee")
   authorApplicationNotes AuthorApplicationNote[]
   contentEdits           ContentPage[]       @relation("ContentEditor")
+  refreshSessions        RefreshSession[]
 
   @@index([role])
+}
+
+// One row per issued refresh token. Tokens are rotated on every refresh; presenting a
+// token that was already rotated revokes the whole family (likely theft).
+model RefreshSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId   String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  rotatedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
 }
 
 model Address {
@@ -210,6 +227,7 @@ model Promotion {
   code             String       @unique
   description      String
   discountType     DiscountType
+  // PERCENT: whole percent (1-100). FLAT: amount off in minor units (paise).
   discountValue    Int
   minSpendMinor    Int?
   maxRedemptions   Int?
@@ -259,7 +277,8 @@ model Order {
   updatedAt        DateTime     @updatedAt
 
   @@index([userId])
-  @@index([status])
+  @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -293,6 +312,7 @@ model Payment {
   updatedAt         DateTime      @updatedAt
 
   @@index([orderId])
+  @@index([razorpayPaymentId])
 }
 
 model PaymentWebhookEvent {
@@ -391,4 +411,5 @@ model AuditEvent {
   createdAt    DateTime @default(now())
 
   @@index([entityType, entityId])
+  @@index([createdAt])
 }

@@ -1,46 +1,77 @@
+# Local stack. `docker compose up -d postgres` for backend development, or
+# `docker compose up --build` for the full stack (site on http://localhost:8080).
+# Credentials here are development defaults; set POSTGRES_PASSWORD in the environment
+# (or a compose .env file) anywhere that isn't your own machine.
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: nightingale
-      POSTGRES_PASSWORD: nightingale
-      POSTGRES_DB: nightingale
+      POSTGRES_USER: ${POSTGRES_USER:-nightingale}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nightingale}
+      POSTGRES_DB: ${POSTGRES_DB:-nightingale}
     ports:
-      - '5432:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nightingale']
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER}']
       interval: 5s
       timeout: 5s
       retries: 10
 
-  api:
+  # One-off release step: applies pending migrations, then exits. The API waits for it.
+  migrate:
     build: .
-    restart: unless-stopped
+    command: ['npx', 'prisma', 'migrate', 'deploy']
     depends_on:
       postgres:
         condition: service_healthy
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql://nightingale:nightingale@postgres:5432/nightingale?schema=public
-    ports:
-      - '4000:4000'
+    # Values come from server/.env (compose reads it for ${...}), with local-stack defaults.
+    environment: &api-env
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nightingale}:${POSTGRES_PASSWORD:-nightingale}@postgres:5432/${POSTGRES_DB:-nightingale}?schema=public
+      NODE_ENV: ${NODE_ENV:-development}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+
+  # One-off admin tasks with the full toolchain, e.g.
+  #   docker compose run --rm tools npm run prisma:seed
+  #   docker compose run --rm -e ADMIN_EMAIL=… -e ADMIN_PASSWORD=… tools npm run create-admin
+  tools:
+    build:
+      context: .
+      target: build
+    profiles: ['tools']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment: *api-env
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment: *api-env
     volumes:
       - uploads_data:/app/uploads
 
   web:
     build:
       context: ../nightingale-press
-      args:
-        VITE_API_URL: http://localhost:4000/api
     restart: unless-stopped
     depends_on:
       - api
     ports:
-      - '8080:80'
+      - '127.0.0.1:${WEB_PORT:-8080}:80'
 
 volumes:
   postgres_data:

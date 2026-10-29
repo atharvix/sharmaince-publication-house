@@ -34,6 +34,9 @@ export default function AdminPromotions() {
         description: String(form.get('description')),
         discountType: String(form.get('discountType')),
         discountValue: Number(form.get('discountValue')),
+        minSpend: form.get('minSpend') ? Number(form.get('minSpend')) : undefined,
+        maxRedemptions: form.get('maxRedemptions') ? Number(form.get('maxRedemptions')) : undefined,
+        endsAt: form.get('endsAt') ? new Date(`${form.get('endsAt')}T23:59:59`).toISOString() : undefined,
         isActive: true,
       });
       setShowForm(false);
@@ -46,8 +49,13 @@ export default function AdminPromotions() {
   }
 
   async function handleToggle(id: string, isActive: boolean) {
-    await api.patch(`/admin/promotions/${id}`, { isActive });
-    reload();
+    setFormError(null);
+    try {
+      await api.patch(`/admin/promotions/${id}`, { isActive });
+      reload();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Could not update this promotion.');
+    }
   }
 
   if (loading) return <LoadingBlock label="Loading promotions…" />;
@@ -64,18 +72,29 @@ export default function AdminPromotions() {
         </Button>
       </div>
 
+      {formError && !showForm && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <ErrorBlock message={formError} />
+        </div>
+      )}
+
       {showForm && (
         <form onSubmit={handleSubmit} className={styles.card}>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+          <div className="form-grid form-grid--2">
             <InputField id="p-code" name="code" label="Code" required placeholder="WELCOME10" />
             <InputField id="p-description" name="description" label="Description" required placeholder="10% off first order" />
           </div>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr', marginTop: 'var(--space-4)' }}>
+          <div className="form-grid form-grid--2" style={{ marginTop: 'var(--space-4)' }}>
             <SelectField id="p-type" name="discountType" label="Discount type" required defaultValue="PERCENT">
               <option value="PERCENT">Percent off</option>
               <option value="FLAT">Flat amount off (₹)</option>
             </SelectField>
-            <InputField id="p-value" name="discountValue" type="number" label="Value" required placeholder="10" />
+            <InputField id="p-value" name="discountValue" type="number" label="Value (% or ₹)" required min={1} step="any" placeholder="10" />
+          </div>
+          <div className="form-grid form-grid--3" style={{ marginTop: 'var(--space-4)' }}>
+            <InputField id="p-min" name="minSpend" type="number" label="Minimum spend (₹)" min={0} step="any" hint="Optional" />
+            <InputField id="p-max" name="maxRedemptions" type="number" label="Usage limit" min={1} step={1} hint="Optional" />
+            <InputField id="p-ends" name="endsAt" type="date" label="Expires on" hint="Optional" />
           </div>
           {formError && <p style={{ color: 'var(--color-error)', fontSize: 'var(--fs-sm)', marginTop: 'var(--space-3)' }}>{formError}</p>}
           <div style={{ marginTop: 'var(--space-5)' }}>

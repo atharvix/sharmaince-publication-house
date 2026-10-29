@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import styles from './BookDetail.module.css';
+import { formatRupees } from '../lib/format';
 
 const AVAILABILITY_CLASS: Record<Book['availability'], string> = {
   'In Stock': styles.inStock,
@@ -113,7 +114,7 @@ export default function BookDetail() {
           </div>
 
           <div className={styles.purchaseRow}>
-            <span className={styles.price}>₹{book.price.toLocaleString('en-IN')}</span>
+            <span className={styles.price}>{formatRupees(book.price)}</span>
             <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>
               {book.availability}
             </span>

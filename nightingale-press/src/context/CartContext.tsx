@@ -29,6 +29,21 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = 'nightingale-cart-v2';
+/** Matches the server's per-title limit (MAX_QUANTITY_PER_TITLE in server/src/modules/pricing.ts). */
+export const MAX_QUANTITY_PER_TITLE = 20;
+
+/** Drops anything in storage that isn't a well-formed line (old format, hand-edited, corrupted). */
+function isCartLine(value: unknown): value is CartLine {
+  const line = value as CartLine;
+  return (
+    typeof line === 'object' &&
+    line !== null &&
+    Number.isInteger(line.quantity) &&
+    line.quantity > 0 &&
+    typeof line.book?.id === 'string' &&
+    typeof line.book.price === 'number'
+  );
+}
 
 export function snapshotFromBook(book: Book): CartBookSnapshot {
   return {
@@ -48,23 +63,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return [];
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as CartLine[]) : [];
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(isCartLine) : [];
     } catch {
       return [];
     }
   });
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    } catch {
+      // Storage full or blocked (private mode): the cart still works for this visit.
+    }
   }, [lines]);
 
   function addItem(book: CartBookSnapshot, quantity = 1) {
     setLines((current) => {
       const existing = current.find((line) => line.book.id === book.id);
       if (existing) {
-        return current.map((line) => (line.book.id === book.id ? { ...line, quantity: line.quantity + quantity } : line));
+        return current.map((line) =>
+          line.book.id === book.id ? { ...line, quantity: Math.min(line.quantity + quantity, MAX_QUANTITY_PER_TITLE) } : line,
+        );
       }
-      return [...current, { book, quantity }];
+      return [...current, { book, quantity: Math.min(quantity, MAX_QUANTITY_PER_TITLE) }];
     });
   }
 
@@ -72,7 +94,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLines((current) =>
       quantity <= 0
         ? current.filter((line) => line.book.id !== bookId)
-        : current.map((line) => (line.book.id === bookId ? { ...line, quantity } : line)),
+        : current.map((line) => (line.book.id === bookId ? { ...line, quantity: Math.min(quantity, MAX_QUANTITY_PER_TITLE) } : line)),
     );
   }
 

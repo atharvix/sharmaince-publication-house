@@ -11,10 +11,19 @@ import { InputField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { ErrorBlock, LoadingBlock } from '../components/ui/RequestState';
 import styles from './Checkout.module.css';
+import { formatMinor, formatRupees } from '../lib/format';
 
 interface CreateOrderResponse {
   order: ApiOrder;
   payment: { razorpayOrderId: string; amountMinor: number; currency: string; keyId: string | null; simulated: boolean };
+}
+
+interface Quote {
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  total: number;
+  promotion: { code: string } | null;
 }
 
 type Stage = 'form' | 'placing' | 'simulate' | 'verifying' | 'failed';
@@ -31,21 +40,87 @@ export default function Checkout() {
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
-  const [promotionCode, setPromotionCode] = useState('');
+  const [promotionInput, setPromotionInput] = useState('');
+  // Only a code the server has accepted is sent with the order.
+  const [appliedPromotion, setAppliedPromotion] = useState<string | undefined>(undefined);
+  const [promotionError, setPromotionError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>('form');
   const [error, setError] = useState<string | null>(null);
   const [pendingOrder, setPendingOrder] = useState<CreateOrderResponse | null>(null);
 
+  const items = lines.map((line) => ({ bookId: line.book.id, quantity: line.quantity }));
+  const itemsKey = JSON.stringify(items);
+  // Totals come from the server, which owns pricing, shipping and promotion rules.
+  const { data: quote, error: quoteError } = useFetch(
+    () => (items.length ? api.post<{ quote: Quote }>('/checkout/quote', { items, promotionCode: appliedPromotion }).then((r) => r.quote) : Promise.resolve(null)),
+    [itemsKey, appliedPromotion],
+  );
+
   if (lines.length === 0 && stage === 'form') {
     return <Navigate to="/cart" replace />;
+  }
+
+  async function handleApplyPromotion() {
+    const code = promotionInput.trim();
+    setPromotionError(null);
+    if (!code) {
+      setAppliedPromotion(undefined);
+      return;
+    }
+    try {
+      await api.post('/checkout/quote', { items, promotionCode: code });
+      setAppliedPromotion(code);
+    } catch (err) {
+      setPromotionError(err instanceof ApiError ? err.message : 'Could not check this code.');
+    }
+  }
+
+  async function payForOrder(order: CreateOrderResponse) {
+    if (order.payment.simulated) {
+      setStage('simulate');
+      return;
+    }
+    setStage('verifying');
+    const response = await openRazorpayCheckout({
+      keyId: order.payment.keyId!,
+      orderId: order.payment.razorpayOrderId,
+      amountMinor: order.payment.amountMinor,
+      currency: order.payment.currency,
+      customerName: user?.name ?? '',
+      customerEmail: user?.email ?? '',
+    });
+    await verifyPayment(order.order.id, response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
+  }
+
+  async function handleCancelPendingOrder() {
+    if (!pendingOrder) return;
+    try {
+      await api.post(`/checkout/orders/${pendingOrder.order.id}/cancel`);
+    } catch {
+      // Already paid, cancelled or expired — nothing left to release.
+    }
+    setPendingOrder(null);
+    setError(null);
+    setStage('form');
   }
 
   async function handlePlaceOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
+    // An order already exists for this checkout (the payment window was closed or failed):
+    // retry paying for it rather than reserving the stock a second time.
+    if (pendingOrder) {
+      try {
+        await payForOrder(pendingOrder);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Payment could not be started.');
+        setStage('failed');
+      }
+      return;
+    }
+
     const form = new FormData(event.currentTarget);
-    const items = lines.map((line) => ({ bookId: line.book.id, quantity: line.quantity }));
 
     const shippingAddress = selectedAddressId
       ? undefined
@@ -70,28 +145,14 @@ export default function Checkout() {
     try {
       const res = await api.post<CreateOrderResponse>('/checkout/orders', {
         items,
-        promotionCode: promotionCode || undefined,
+        promotionCode: appliedPromotion,
         shippingAddressId: selectedAddressId ?? undefined,
         shippingAddress,
       });
       setPendingOrder(res);
-
-      if (res.payment.simulated) {
-        setStage('simulate');
-      } else {
-        setStage('verifying');
-        const response = await openRazorpayCheckout({
-          keyId: res.payment.keyId!,
-          orderId: res.payment.razorpayOrderId,
-          amountMinor: res.payment.amountMinor,
-          currency: res.payment.currency,
-          customerName: user?.name ?? '',
-          customerEmail: user?.email ?? '',
-        });
-        await verifyPayment(res.order.id, response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
-      }
+      await payForOrder(res);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Payment could not be started. Please try again.');
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Payment could not be started. Please try again.');
       setStage('failed');
     }
   }
@@ -103,6 +164,8 @@ export default function Checkout() {
       clear();
       navigate(`/checkout/confirmation/${orderId}`, { replace: true });
     } catch (err) {
+      // An expired order can't be paid any more (the server refunded the attempt); start fresh.
+      if (err instanceof ApiError && err.code === 'ORDER_EXPIRED') setPendingOrder(null);
       setError(err instanceof ApiError ? err.message : 'We could not verify your payment.');
       setStage('failed');
     }
@@ -115,8 +178,11 @@ export default function Checkout() {
     verifyPayment(pendingOrder.order.id, pendingOrder.payment.razorpayOrderId, paymentId, signature);
   }
 
-  const shipping = subtotal >= 1000 ? 0 : 60;
-  const total = subtotal + shipping;
+  const payLabel = pendingOrder
+    ? `Retry payment of ${formatMinor(pendingOrder.payment.amountMinor)}`
+    : quote
+      ? `Pay ${formatRupees(quote.total)}`
+      : 'Place order';
 
   return (
     <>
@@ -167,17 +233,17 @@ export default function Checkout() {
 
                 {showNewAddress && (
                   <div style={{ display: 'grid', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-                    <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="form-grid form-grid--2">
                       <InputField id="co-label" name="label" label="Label" placeholder="Home" />
                       <InputField id="co-fullname" name="fullName" label="Full name" required />
                     </div>
-                    <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="form-grid form-grid--2">
                       <InputField id="co-phone" name="phone" type="tel" label="Phone" required />
                       <InputField id="co-country" name="country" label="Country" defaultValue="India" />
                     </div>
                     <InputField id="co-line1" name="line1" label="Address line 1" required />
                     <InputField id="co-line2" name="line2" label="Address line 2 (optional)" />
-                    <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr 1fr' }}>
+                    <div className="form-grid form-grid--3">
                       <InputField id="co-city" name="city" label="City" required />
                       <InputField id="co-state" name="state" label="State" required />
                       <InputField id="co-postal" name="postalCode" label="PIN code" required />
@@ -191,10 +257,21 @@ export default function Checkout() {
                   id="co-promo"
                   label="Promotion code"
                   placeholder="e.g. WELCOME10"
-                  hint="Optional — applied when you place your order."
-                  value={promotionCode}
-                  onChange={(e) => setPromotionCode(e.target.value.toUpperCase())}
+                  hint={appliedPromotion ? `${appliedPromotion} applied.` : 'Optional.'}
+                  value={promotionInput}
+                  disabled={Boolean(pendingOrder)}
+                  onChange={(e) => setPromotionInput(e.target.value.toUpperCase())}
                 />
+                {promotionError && (
+                  <p role="alert" style={{ color: 'var(--color-error)', fontSize: 'var(--fs-sm)', marginTop: 'var(--space-2)' }}>
+                    {promotionError}
+                  </p>
+                )}
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <Button type="button" size="sm" variant="outline" disabled={Boolean(pendingOrder)} onClick={handleApplyPromotion}>
+                    {appliedPromotion && promotionInput.trim() === appliedPromotion ? 'Applied' : 'Apply code'}
+                  </Button>
+                </div>
               </div>
 
               {error && (
@@ -221,9 +298,16 @@ export default function Checkout() {
               )}
 
               {stage === 'form' || stage === 'placing' || stage === 'failed' ? (
-                <Button type="submit" size="lg" variant="primary" disabled={stage === 'placing'}>
-                  {stage === 'placing' ? 'Placing order…' : `Pay ₹${total.toLocaleString('en-IN')}`}
-                </Button>
+                <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                  <Button type="submit" size="lg" variant="primary" disabled={stage === 'placing' || (!quote && !pendingOrder)}>
+                    {stage === 'placing' ? 'Placing order…' : payLabel}
+                  </Button>
+                  {pendingOrder && stage === 'failed' && (
+                    <Button type="button" size="lg" variant="ghost" onClick={handleCancelPendingOrder}>
+                      Cancel order
+                    </Button>
+                  )}
+                </div>
               ) : stage === 'verifying' ? (
                 <LoadingBlock label="Confirming your payment…" />
               ) : null}
@@ -237,24 +321,32 @@ export default function Checkout() {
                 <span>
                   {line.book.title} × {line.quantity}
                 </span>
-                <span>₹{(line.book.price * line.quantity).toLocaleString('en-IN')}</span>
+                <span>{formatRupees(line.book.price * line.quantity)}</span>
               </div>
             ))}
             <div className={styles.summaryRow}>
               <span>Subtotal</span>
-              <span>₹{subtotal.toLocaleString('en-IN')}</span>
+              <span>{formatRupees(quote?.subtotal ?? subtotal)}</span>
             </div>
+            {quote && quote.discount > 0 && (
+              <div className={styles.summaryRow}>
+                <span>Discount{quote.promotion ? ` (${quote.promotion.code})` : ''}</span>
+                <span>−{formatRupees(quote.discount)}</span>
+              </div>
+            )}
             <div className={styles.summaryRow}>
               <span>Shipping</span>
-              <span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
+              <span>{quote ? (quote.shipping === 0 ? 'Free' : formatRupees(quote.shipping)) : '—'}</span>
             </div>
             <div className={styles.summaryTotal}>
               <span>Total</span>
-              <span>₹{total.toLocaleString('en-IN')}</span>
+              <span>{quote ? formatRupees(quote.total) : '—'}</span>
             </div>
-            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-ink-500)', marginTop: 'var(--space-4)' }}>
-              Final total (including any promotion) is confirmed by the server when your order is placed.
-            </p>
+            {quoteError && (
+              <p role="alert" style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-error)', marginTop: 'var(--space-4)' }}>
+                {quoteError}
+              </p>
+            )}
           </div>
         </div>
       </div>

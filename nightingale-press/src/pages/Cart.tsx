@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { MAX_QUANTITY_PER_TITLE, useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { PageHero } from '../components/ui/PageHero';
 import { BookCover } from '../components/ui/BookCover';
 import { Button } from '../components/ui/Button';
 import { Reveal } from '../components/ui/Reveal';
 import styles from './Cart.module.css';
+import { formatRupees } from '../lib/format';
 
 export default function Cart() {
   const { lines, subtotal, updateQuantity, removeItem } = useCart();
@@ -48,6 +49,7 @@ export default function Cart() {
                           type="button"
                           className={styles.stepperButton}
                           onClick={() => updateQuantity(line.book.id, line.quantity + 1)}
+                          disabled={line.quantity >= MAX_QUANTITY_PER_TITLE}
                           aria-label={`Increase quantity of ${line.book.title}`}
                         >
                           +
@@ -58,7 +60,7 @@ export default function Cart() {
                       </button>
                     </div>
                   </div>
-                  <span className={styles.linePrice}>₹{(line.book.price * line.quantity).toLocaleString('en-IN')}</span>
+                  <span className={styles.linePrice}>{formatRupees(line.book.price * line.quantity)}</span>
                 </div>
               ))}
             </div>
@@ -67,7 +69,7 @@ export default function Cart() {
               <h2 style={{ fontSize: 'var(--fs-md)' }}>Order Summary</h2>
               <div className={styles.summaryRow}>
                 <span>Subtotal</span>
-                <span>₹{subtotal.toLocaleString('en-IN')}</span>
+                <span>{formatRupees(subtotal)}</span>
               </div>
               <div className={styles.summaryRow}>
                 <span>Shipping</span>
@@ -75,7 +77,7 @@ export default function Cart() {
               </div>
               <div className={styles.summaryTotal}>
                 <span>Estimated total</span>
-                <span>₹{subtotal.toLocaleString('en-IN')}</span>
+                <span>{formatRupees(subtotal)}</span>
               </div>
               <div style={{ marginTop: 'var(--space-5)' }}>
                 <Button size="lg" variant="primary" onClick={handleCheckout} type="button">

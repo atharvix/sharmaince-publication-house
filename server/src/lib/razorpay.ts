@@ -1,12 +1,16 @@
 import crypto from 'node:crypto';
 import Razorpay from 'razorpay';
-import { env, isRazorpayConfigured } from '../env.js';
+import { env, isProduction, isRazorpayConfigured } from '../env.js';
 
 const client = isRazorpayConfigured
   ? new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET })
   : null;
 
-export { isRazorpayConfigured };
+// Simulated payments exist only so checkout can be exercised locally without a gateway
+// account. env.ts refuses to boot production without keys; this is a second lock.
+const simulationEnabled = !client && !isProduction;
+
+const SIMULATED_ORDER_PREFIX = 'order_dev_';
 
 interface CreateOrderInput {
   amountMinor: number;
@@ -19,50 +23,54 @@ export interface RazorpayOrderResult {
   simulated: boolean;
 }
 
-/**
- * Creates a Razorpay order. When no API keys are configured (local/dev), returns a
- * deterministic simulated order instead, so the full checkout flow can be exercised
- * end-to-end without a real payment-gateway account. Simulated orders are clearly
- * flagged (`simulated: true`) and never treated as proof of payment on their own.
- */
-export async function createRazorpayOrder({ amountMinor, currency, receipt }: CreateOrderInput): Promise<RazorpayOrderResult> {
-  if (!client) {
-    return { id: `order_dev_${crypto.randomBytes(10).toString('hex')}`, simulated: true };
-  }
+function requireClient() {
+  if (!client) throw new Error('Razorpay is not configured');
+  return client;
+}
 
-  const order = await client.orders.create({ amount: amountMinor, currency, receipt });
+export async function createRazorpayOrder({ amountMinor, currency, receipt }: CreateOrderInput): Promise<RazorpayOrderResult> {
+  if (simulationEnabled) {
+    return { id: `${SIMULATED_ORDER_PREFIX}${crypto.randomBytes(10).toString('hex')}`, simulated: true };
+  }
+  const order = await requireClient().orders.create({ amount: amountMinor, currency, receipt });
   return { id: order.id, simulated: false };
 }
 
-/** The signature a simulated dev payment must present — never valid in a real Razorpay flow. */
+export function isSimulatedOrder(razorpayOrderId: string) {
+  return razorpayOrderId.startsWith(SIMULATED_ORDER_PREFIX);
+}
+
+/** The signature a simulated dev payment must present — never accepted outside simulation mode. */
 export function simulatedSignatureFor(razorpayOrderId: string, razorpayPaymentId: string) {
   return `simulated.${razorpayOrderId}.${razorpayPaymentId}`;
 }
 
 /**
- * Verifies a payment signature per Razorpay's documented scheme:
+ * Verifies a checkout signature per Razorpay's scheme:
  * HMAC_SHA256(order_id + "|" + payment_id, key_secret) === signature.
- * In dev-simulated mode (no keys configured), accepts only the deterministic
- * simulated signature format — real Razorpay signatures are never valid there either way.
  */
 export function verifyPaymentSignature(razorpayOrderId: string, razorpayPaymentId: string, signature: string): boolean {
-  if (!isRazorpayConfigured) {
-    return signature === simulatedSignatureFor(razorpayOrderId, razorpayPaymentId);
+  if (simulationEnabled) {
+    return isSimulatedOrder(razorpayOrderId) && signature === simulatedSignatureFor(razorpayOrderId, razorpayPaymentId);
   }
-
   const expected = crypto
     .createHmac('sha256', env.RAZORPAY_KEY_SECRET)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest('hex');
-
   return timingSafeEqual(expected, signature);
 }
 
 /** Verifies an inbound webhook's `x-razorpay-signature` header against the raw request body. */
-export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+export function verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
   if (!env.RAZORPAY_WEBHOOK_SECRET) return false;
   const expected = crypto.createHmac('sha256', env.RAZORPAY_WEBHOOK_SECRET).update(rawBody).digest('hex');
   return timingSafeEqual(expected, signature);
+}
+
+/** Issues a full refund for a captured payment. Simulated payments have nothing to refund. */
+export async function refundRazorpayPayment(razorpayOrderId: string, razorpayPaymentId: string, amountMinor: number) {
+  if (isSimulatedOrder(razorpayOrderId)) return;
+  await requireClient().payments.refund(razorpayPaymentId, { amount: amountMinor });
 }
 
 function timingSafeEqual(a: string, b: string) {

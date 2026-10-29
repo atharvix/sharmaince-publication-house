@@ -7,13 +7,14 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { publicFormRateLimiter } from '../middleware/rateLimit.js';
+import { emailSchema, pageMeta, paginate, paginationQuery } from '../lib/validation.js';
 
 export const authorApplicationsRouter = Router();
 
 const createSchema = z.object({
   body: z.object({
     name: z.string().min(1).max(120),
-    email: z.string().email(),
+    email: emailSchema,
     subjectArea: z.string().min(1).max(80),
     workingTitle: z.string().min(1).max(200),
     synopsis: z.string().min(1).max(4000),
@@ -34,14 +35,22 @@ authorApplicationsRouter.post(
 
 authorApplicationsRouter.use('/admin', requireAuth, requireRole('STAFF', 'ADMIN'));
 
+const adminListQuery = z.object(paginationQuery(50));
+
 authorApplicationsRouter.get(
   '/admin',
-  asyncHandler(async (_req, res) => {
-    const items = await prisma.authorApplication.findMany({
-      include: { notes: { include: { authorUser: { select: { name: true } } }, orderBy: { createdAt: 'desc' } } },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ items });
+  validate({ query: adminListQuery }),
+  asyncHandler(async (req, res) => {
+    const { page, pageSize } = req.query as unknown as z.infer<typeof adminListQuery>;
+    const [total, items] = await Promise.all([
+      prisma.authorApplication.count(),
+      prisma.authorApplication.findMany({
+        include: { notes: { include: { authorUser: { select: { name: true } } }, orderBy: { createdAt: 'desc' } } },
+        orderBy: { createdAt: 'desc' },
+        ...paginate(page, pageSize),
+      }),
+    ]);
+    res.json({ items, ...pageMeta(page, pageSize, total) });
   }),
 );
 

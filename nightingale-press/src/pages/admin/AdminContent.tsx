@@ -50,7 +50,8 @@ export default function AdminContent() {
 
   async function handleAddFaq(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setFaqError(null);
     try {
       await api.post('/admin/content/faqs', {
@@ -60,7 +61,7 @@ export default function AdminContent() {
         sortOrder: 0,
         isPublished: true,
       });
-      event.currentTarget.reset();
+      formElement.reset();
       reloadFaqs();
     } catch (err) {
       setFaqError(err instanceof ApiError ? err.message : 'Could not save this FAQ.');
@@ -68,8 +69,14 @@ export default function AdminContent() {
   }
 
   async function handleDeleteFaq(id: string) {
-    await api.delete(`/admin/content/faqs/${id}`);
-    reloadFaqs();
+    if (!window.confirm('Delete this FAQ? This cannot be undone.')) return;
+    setFaqError(null);
+    try {
+      await api.delete(`/admin/content/faqs/${id}`);
+      reloadFaqs();
+    } catch (err) {
+      setFaqError(err instanceof ApiError ? err.message : 'Could not delete this FAQ.');
+    }
   }
 
   async function handleSavePage(event: FormEvent<HTMLFormElement>) {
@@ -158,7 +165,7 @@ export default function AdminContent() {
       <div className={styles.card}>
         <h2 style={{ marginBottom: 'var(--space-4)' }}>FAQs</h2>
         <form onSubmit={handleAddFaq} style={{ display: 'grid', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '160px 1fr' }}>
+          <div className="form-grid form-grid--aside">
             <SelectField id="faq-topic" name="topic" label="Topic" required defaultValue="ORDERS">
               {TOPICS.map((topic) => (
                 <option key={topic} value={topic}>

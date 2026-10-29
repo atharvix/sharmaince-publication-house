@@ -1,3 +1,4 @@
+import { Pager, type PageMeta } from '../../components/ui/Pager';
 import { useFetch } from '../../hooks/useFetch';
 import { api, ApiError } from '../../lib/api';
 import { useState } from 'react';
@@ -23,7 +24,12 @@ interface BulkOrderRow {
 }
 
 export default function AdminBulkOrders() {
-  const { data, loading, error, reload } = useFetch(() => api.get<{ items: BulkOrderRow[] }>('/bulk-orders/admin').then((r) => r.items), []);
+  const [page, setPage] = useState(1);
+  const { data: pageData, loading, refreshing, error, reload } = useFetch(
+    () => api.get<{ items: BulkOrderRow[] } & PageMeta>(`/bulk-orders/admin?page=${page}`),
+    [page],
+  );
+  const data = pageData?.items;
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function handleStatusChange(id: string, status: BulkOrderStatus) {
@@ -37,7 +43,7 @@ export default function AdminBulkOrders() {
   }
 
   if (loading) return <LoadingBlock label="Loading bulk order requests…" />;
-  if (error || !data) return <ErrorBlock message={error ?? 'Could not load bulk order requests.'} onRetry={reload} />;
+  if (error || !data || !pageData) return <ErrorBlock message={error ?? 'Could not load bulk order requests.'} onRetry={reload} />;
 
   return (
     <div>
@@ -85,6 +91,7 @@ export default function AdminBulkOrders() {
         ))}
       </div>
       )}
+      <Pager meta={pageData} onPage={setPage} disabled={refreshing} />
     </div>
   );
 }

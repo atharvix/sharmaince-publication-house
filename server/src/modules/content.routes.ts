@@ -45,15 +45,15 @@ adminContentRouter.get(
 );
 
 const pageSchema = z.object({
-  title: z.string().min(1).max(200),
-  intro: z.string().max(2000).optional(),
-  sections: z.array(z.object({ heading: z.string().min(1), body: z.string().min(1) })),
+  title: z.string().trim().min(1).max(200),
+  intro: z.string().trim().max(2000).optional(),
+  sections: z.array(z.object({ heading: z.string().trim().min(1).max(200), body: z.string().trim().min(1).max(10_000) })).max(50),
   isPublished: z.boolean().default(true),
 });
 
 adminContentRouter.put(
   '/pages/:slug',
-  validate({ body: pageSchema }),
+  validate({ params: z.object({ slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(100) }), body: pageSchema }),
   asyncHandler(async (req, res) => {
     const page = await prisma.contentPage.upsert({
       where: { slug: req.params.slug },
@@ -67,8 +67,8 @@ adminContentRouter.put(
 
 const faqSchema = z.object({
   topic: z.enum(['ORDERS', 'DELIVERY', 'RETURNS', 'SUBMISSIONS', 'ACCOUNTS']),
-  question: z.string().min(1).max(300),
-  answer: z.string().min(1).max(2000),
+  question: z.string().trim().min(1).max(300),
+  answer: z.string().trim().min(1).max(2000),
   sortOrder: z.number().int().default(0),
   isPublished: z.boolean().default(true),
 });
@@ -85,6 +85,7 @@ adminContentRouter.post(
   validate({ body: faqSchema }),
   asyncHandler(async (req, res) => {
     const faq = await prisma.faq.create({ data: req.body });
+    await recordAudit({ actorUserId: req.user!.id, action: 'FAQ_CREATED', entityType: 'Faq', entityId: faq.id });
     res.status(201).json({ faq });
   }),
 );
@@ -94,6 +95,7 @@ adminContentRouter.patch(
   validate({ body: faqSchema.partial() }),
   asyncHandler(async (req, res) => {
     const faq = await prisma.faq.update({ where: { id: req.params.id }, data: req.body });
+    await recordAudit({ actorUserId: req.user!.id, action: 'FAQ_UPDATED', entityType: 'Faq', entityId: faq.id });
     res.json({ faq });
   }),
 );
@@ -102,6 +104,7 @@ adminContentRouter.delete(
   '/faqs/:id',
   asyncHandler(async (req, res) => {
     await prisma.faq.delete({ where: { id: req.params.id } });
+    await recordAudit({ actorUserId: req.user!.id, action: 'FAQ_DELETED', entityType: 'Faq', entityId: req.params.id });
     res.status(204).send();
   }),
 );

@@ -176,3 +176,29 @@ select {
     background-position: 200% 0;
   }
 }
+
+/* Form layouts: side-by-side fields that stack on narrow screens. Use these instead of
+   inline grid-template-columns, which can't respond to the viewport. */
+.form-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .form-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .form-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .form-grid--aside {
+    grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+  }
+}

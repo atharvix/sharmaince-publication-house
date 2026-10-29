@@ -10,29 +10,64 @@ if (process.env.NODE_ENV === 'test') {
 }
 config();
 
-const schema = z.object({
-  PORT: z.coerce.number().default(4000),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+const durationPattern = /^\d+[smhd]$/;
+const DURATION_UNITS_MS = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
 
-  JWT_ACCESS_SECRET: z.string().min(1),
-  JWT_REFRESH_SECRET: z.string().min(1),
-  JWT_ACCESS_TTL: z.string().default('15m'),
-  JWT_REFRESH_TTL: z.string().default('30d'),
+/** Parses a `15m` / `30d` style duration into milliseconds. */
+export function durationToMs(value: string) {
+  const unit = value.slice(-1) as keyof typeof DURATION_UNITS_MS;
+  return Number(value.slice(0, -1)) * DURATION_UNITS_MS[unit];
+}
 
-  RAZORPAY_KEY_ID: z.string().default(''),
-  RAZORPAY_KEY_SECRET: z.string().default(''),
-  RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
+const schema = z
+  .object({
+    PORT: z.coerce.number().int().positive().default(4000),
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+    // Comma-separated list of allowed browser origins.
+    CORS_ORIGIN: z
+      .string()
+      .default('http://localhost:5173')
+      .transform((value) => value.split(',').map((origin) => origin.trim()).filter(Boolean)),
+    // Number of reverse proxies in front of the app (load balancer, ingress). Needed so
+    // req.ip — and therefore rate limiting — sees the client, not the proxy.
+    TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 
-  SMTP_HOST: z.string().default(''),
-  SMTP_PORT: z.coerce.number().default(587),
-  SMTP_USER: z.string().default(''),
-  SMTP_PASSWORD: z.string().default(''),
-  EMAIL_FROM: z.string().default('Nightingale Academic Press <no-reply@nightingalepress.example>'),
+    JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
+    JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+    JWT_ACCESS_TTL: z.string().regex(durationPattern).default('15m'),
+    JWT_REFRESH_TTL: z.string().regex(durationPattern).default('30d'),
 
-  PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
-});
+    RAZORPAY_KEY_ID: z.string().default(''),
+    RAZORPAY_KEY_SECRET: z.string().default(''),
+    RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
+
+    // Unpaid orders release their reserved stock after this many minutes.
+    PENDING_ORDER_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+
+    SMTP_HOST: z.string().default(''),
+    SMTP_PORT: z.coerce.number().default(587),
+    SMTP_USER: z.string().default(''),
+    SMTP_PASSWORD: z.string().default(''),
+    EMAIL_FROM: z.string().default('Nightingale Academic Press <no-reply@nightingalepress.example>'),
+
+    PUBLIC_WEB_URL: z.string().url().default('http://localhost:5173'),
+    UPLOADS_DIR: z.string().default('uploads'),
+  })
+  .superRefine((value, ctx) => {
+    if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET) {
+      ctx.addIssue({ code: 'custom', path: ['JWT_REFRESH_SECRET'], message: 'Must differ from JWT_ACCESS_SECRET' });
+    }
+    if (value.NODE_ENV !== 'production') return;
+    // Production must never fall back to simulated payments or console email.
+    for (const key of ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'SMTP_HOST'] as const) {
+      if (!value[key]) ctx.addIssue({ code: 'custom', path: [key], message: `${key} is required in production` });
+    }
+    if (!value.PUBLIC_WEB_URL.startsWith('https://')) {
+      ctx.addIssue({ code: 'custom', path: ['PUBLIC_WEB_URL'], message: 'Must be https in production' });
+    }
+  });
 
 const parsed = schema.safeParse(process.env);
 
@@ -43,5 +78,6 @@ if (!parsed.success) {
 
 export const env = parsed.data;
 
+export const isProduction = env.NODE_ENV === 'production';
 export const isRazorpayConfigured = Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
 export const isSmtpConfigured = Boolean(env.SMTP_HOST);

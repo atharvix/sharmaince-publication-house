@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHero } from '../components/ui/PageHero';
 import { Reveal } from '../components/ui/Reveal';
 import { Button } from '../components/ui/Button';
@@ -14,7 +15,14 @@ const INFO = [
   { icon: '🕐', label: 'Hours', value: 'Mon–Sat, 9:30 AM – 6:00 PM IST' },
 ];
 
+const REASONS = ['order', 'catalogue', 'inspection', 'partnership', 'other'];
+
 export default function Contact() {
+  const [searchParams] = useSearchParams();
+  // Book pages link here as ?reason=inspection&title=… so faculty don't retype the title.
+  const presetReason = REASONS.includes(searchParams.get('reason') ?? '') ? searchParams.get('reason')! : '';
+  const presetTitle = searchParams.get('title');
+  const presetMessage = presetReason === 'inspection' && presetTitle ? `I'd like an inspection copy of "${presetTitle}" for my course.` : '';
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -79,16 +87,17 @@ export default function Contact() {
                   <InputField id="contact-name" name="name" label="Full name" required placeholder="Your name" />
                   <InputField id="contact-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />
                 </div>
-                <SelectField id="contact-reason" name="reason" label="Reason for contact" required defaultValue="">
+                <SelectField id="contact-reason" name="reason" label="Reason for contact" required defaultValue={presetReason}>
                   <option value="" disabled>
                     Select a reason
                   </option>
                   <option value="order">Order or delivery question</option>
                   <option value="catalogue">Catalogue or title availability</option>
+                  <option value="inspection">Inspection copy for a course</option>
                   <option value="partnership">Institutional partnership</option>
                   <option value="other">Something else</option>
                 </SelectField>
-                <TextareaField id="contact-message" name="message" label="Message" required placeholder="How can we help?" />
+                <TextareaField id="contact-message" name="message" label="Message" required placeholder="How can we help?" defaultValue={presetMessage} />
                 {error && <p style={{ color: 'var(--color-error)', fontSize: 'var(--fs-sm)' }}>{error}</p>}
                 <Button type="submit" size="lg" variant="primary" disabled={submitting}>
                   {submitting ? 'Sending…' : 'Send Message'}

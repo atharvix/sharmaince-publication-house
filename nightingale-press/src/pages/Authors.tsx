@@ -153,7 +153,7 @@ export default function Authors() {
             />
           ) : (
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: '640px' }}>
-              <div style={{ display: 'grid', gap: 'var(--space-5)', gridTemplateColumns: '1fr 1fr' }}>
+              <div className="form-grid form-grid--2" style={{ gap: 'var(--space-5)' }}>
                 <InputField id="author-name" name="name" label="Full name" required placeholder="Dr. Jane Doe" />
                 <InputField id="author-email" name="email" type="email" label="Email address" required placeholder="you@institution.edu" />
               </div>

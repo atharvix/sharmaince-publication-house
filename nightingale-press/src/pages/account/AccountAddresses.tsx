@@ -69,17 +69,17 @@ export default function AccountAddresses() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className={styles.card} style={{ display: 'grid', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+          <div className="form-grid form-grid--2">
             <InputField id="addr-label" name="label" label="Label" required placeholder="Home, Hostel, Office…" />
             <InputField id="addr-fullname" name="fullName" label="Full name" required />
           </div>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+          <div className="form-grid form-grid--2">
             <InputField id="addr-phone" name="phone" type="tel" label="Phone" required />
             <InputField id="addr-country" name="country" label="Country" defaultValue="India" />
           </div>
           <InputField id="addr-line1" name="line1" label="Address line 1" required />
           <InputField id="addr-line2" name="line2" label="Address line 2 (optional)" />
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr 1fr' }}>
+          <div className="form-grid form-grid--3">
             <InputField id="addr-city" name="city" label="City" required />
             <InputField id="addr-state" name="state" label="State" required />
             <InputField id="addr-postal" name="postalCode" label="PIN code" required />

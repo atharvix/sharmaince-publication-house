@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 
 const SALT_ROUNDS = 12;
 
@@ -10,8 +11,11 @@ export function verifyPassword(plain: string, hash: string) {
   return bcrypt.compare(plain, hash);
 }
 
-const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-
-export function isStrongPassword(plain: string) {
-  return STRONG_PASSWORD.test(plain);
-}
+// bcrypt silently ignores bytes past 72, so longer passwords would give a false sense of strength.
+export const passwordSchema = z
+  .string()
+  .min(8)
+  .max(72)
+  .regex(/[a-z]/, 'Password must include a lowercase letter')
+  .regex(/[A-Z]/, 'Password must include an uppercase letter')
+  .regex(/\d/, 'Password must include a number');

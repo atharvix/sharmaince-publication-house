@@ -5,6 +5,7 @@ import type { ApiOrder } from '../types/api';
 import { Button } from '../components/ui/Button';
 import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
+import { formatMinor } from '../lib/format';
 
 export default function OrderConfirmation() {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +38,7 @@ export default function OrderConfirmation() {
         </div>
         <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Order confirmed</h1>
         <p style={{ marginTop: 'var(--space-3)', color: 'var(--color-ink-500)' }}>
-          Thank you — order <strong>{order.orderNumber}</strong> for ₹{(order.totalMinor / 100).toLocaleString('en-IN')} has been
+          Thank you — order <strong>{order.orderNumber}</strong> for {formatMinor(order.totalMinor)} has been
           placed. A confirmation email is on its way.
         </p>
         <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', marginTop: 'var(--space-7)' }}>

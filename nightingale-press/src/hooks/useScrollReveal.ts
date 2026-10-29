@@ -7,16 +7,12 @@ import { useEffect, useRef, useState } from 'react';
  */
 export function useScrollReveal(threshold = 0.15) {
   const ref = useRef<HTMLElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  // Without IntersectionObserver (very old browsers) everything is simply shown.
+  const [isVisible, setIsVisible] = useState(() => typeof IntersectionObserver === 'undefined');
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
-
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true);
-      return;
-    }
+    if (!node || isVisible) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -30,7 +26,7 @@ export function useScrollReveal(threshold = 0.15) {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [threshold]);
+  }, [threshold, isVisible]);
 
   return { ref, isVisible };
 }

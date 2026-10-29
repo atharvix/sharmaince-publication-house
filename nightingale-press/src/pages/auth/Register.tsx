@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { safeRedirect } from '../../lib/redirect';
 import { InputField } from '../../components/ui/FormField';
 import { Button } from '../../components/ui/Button';
 import { AuthLayout } from './AuthLayout';
@@ -11,7 +12,7 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect') ?? '/account';
+  const redirect = safeRedirect(searchParams.get('redirect'), '/account');
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

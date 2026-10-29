@@ -8,6 +8,7 @@ import { ImageUpload } from '../../components/ui/ImageUpload';
 import { BookCover } from '../../components/ui/BookCover';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AdminLayout.module.css';
+import { formatRupees, humanizeEnum } from '../../lib/format';
 
 interface AdminBook extends ApiBook {
   stockQuantity: number;
@@ -119,7 +120,7 @@ export default function AdminBooks() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className={styles.card}>
-          <div style={{ display: 'grid', gap: 'var(--space-5)', gridTemplateColumns: '220px 1fr', marginBottom: 'var(--space-4)' }}>
+          <div className="form-grid form-grid--aside" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-4)' }}>
             {editing ? (
               <ImageUpload
                 label="Cover image"
@@ -142,7 +143,7 @@ export default function AdminBooks() {
             </div>
           </div>
           <InputField id="b-subtitle" name="subtitle" label="Subtitle" defaultValue={editing?.subtitle ?? ''} />
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr 1fr', marginTop: 'var(--space-4)' }}>
+          <div className="form-grid form-grid--3" style={{ marginTop: 'var(--space-4)' }}>
             <SelectField id="b-category" name="categoryId" label="Category" required defaultValue={editing?.category.id ?? ''}>
               <option value="" disabled>
                 Select
@@ -183,14 +184,14 @@ export default function AdminBooks() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr 1fr 1fr', marginTop: 'var(--space-4)' }}>
+          <div className="form-grid form-grid--4" style={{ marginTop: 'var(--space-4)' }}>
             <InputField id="b-price" name="price" type="number" step="0.01" label="Price (₹)" required defaultValue={editing?.price} />
             <InputField id="b-edition" name="edition" label="Edition" required defaultValue={editing?.edition} />
             <InputField id="b-isbn" name="isbn" label="ISBN" required defaultValue={editing?.isbn} />
             <InputField id="b-pages" name="pages" type="number" label="Pages" required defaultValue={editing?.pages} />
           </div>
 
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr 1fr', marginTop: 'var(--space-4)' }}>
+          <div className="form-grid form-grid--3" style={{ marginTop: 'var(--space-4)' }}>
             <SelectField id="b-status" name="status" label="Status" required defaultValue={editing?.status ?? 'DRAFT'}>
               <option value="DRAFT">Draft</option>
               <option value="PUBLISHED">Published</option>
@@ -273,9 +274,9 @@ export default function AdminBooks() {
                 </td>
                 <td>{book.title}</td>
                 <td>{book.category.name}</td>
-                <td>₹{book.price.toLocaleString('en-IN')}</td>
+                <td>{formatRupees(book.price)}</td>
                 <td>{book.stockQuantity}</td>
-                <td>{book.status}</td>
+                <td>{humanizeEnum(book.status)}</td>
                 <td style={{ display: 'flex', gap: 'var(--space-2)' }}>
                   <Button size="sm" variant="ghost" type="button" onClick={() => openEdit(book)}>
                     Edit

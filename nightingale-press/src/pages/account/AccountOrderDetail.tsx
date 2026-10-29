@@ -5,6 +5,7 @@ import type { ApiOrder } from '../../types/api';
 import { OrderTimeline } from '../../components/ui/OrderTimeline';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AccountLayout.module.css';
+import { formatMinor } from '../../lib/format';
 
 export default function AccountOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -53,28 +54,28 @@ export default function AccountOrderDetail() {
               <span>
                 {item.titleSnapshot} <span style={{ color: 'var(--color-ink-500)' }}>× {item.quantity}</span>
               </span>
-              <span>₹{(item.lineTotalMinor / 100).toLocaleString('en-IN')}</span>
+              <span>{formatMinor(item.lineTotalMinor)}</span>
             </div>
           ))}
         </div>
         <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--fs-sm)', color: 'var(--color-ink-500)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Subtotal</span>
-            <span>₹{(order.subtotalMinor / 100).toLocaleString('en-IN')}</span>
+            <span>{formatMinor(order.subtotalMinor)}</span>
           </div>
           {order.discountMinor > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Discount</span>
-              <span>−₹{(order.discountMinor / 100).toLocaleString('en-IN')}</span>
+              <span>−{formatMinor(order.discountMinor)}</span>
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Shipping</span>
-            <span>{order.shippingMinor === 0 ? 'Free' : `₹${(order.shippingMinor / 100).toLocaleString('en-IN')}`}</span>
+            <span>{order.shippingMinor === 0 ? 'Free' : `${formatMinor(order.shippingMinor)}`}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--color-ink-900)', fontSize: 'var(--fs-md)' }}>
             <span>Total</span>
-            <span>₹{(order.totalMinor / 100).toLocaleString('en-IN')}</span>
+            <span>{formatMinor(order.totalMinor)}</span>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { safeRedirect } from '../../lib/redirect';
 import { InputField } from '../../components/ui/FormField';
 import { Button } from '../../components/ui/Button';
 import { AuthLayout } from './AuthLayout';
@@ -11,7 +12,8 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect') ?? '/account';
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
+  const redirect = safeRedirect(searchParams.get('redirect'), '/account');
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +40,7 @@ export default function Login() {
   return (
     <AuthLayout eyebrow="Welcome back" title="Log in to your account" subtitle="Track orders, manage your wishlist and check out faster.">
       <form className={styles.form} onSubmit={handleSubmit}>
+        {notice && !error && <p className={styles.noticeBanner} role="status">{notice}</p>}
         <InputField id="login-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />
         <InputField id="login-password" name="password" type="password" label="Password" required placeholder="••••••••" />
         {error && <p className={styles.errorBanner} role="alert">{error}</p>}

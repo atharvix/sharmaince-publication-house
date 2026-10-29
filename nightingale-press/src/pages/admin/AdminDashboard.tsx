@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import type { ApiOrder } from '../../types/api';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AdminLayout.module.css';
+import { formatMinor, formatRupees, humanizeEnum } from '../../lib/format';
 
 interface DashboardData {
   recentOrders: (ApiOrder & { user: { name: string; email: string } })[];
@@ -25,7 +26,7 @@ export default function AdminDashboard() {
       <div className={styles.statCards}>
         {data.totalRevenue !== null && (
           <div className={styles.card}>
-            <p className={styles.statValue}>₹{data.totalRevenue.toLocaleString('en-IN')}</p>
+            <p className={styles.statValue}>{formatRupees(data.totalRevenue)}</p>
             <p className={styles.statLabel}>Total revenue (paid+)</p>
           </div>
         )}
@@ -65,8 +66,8 @@ export default function AdminDashboard() {
                   </Link>
                 </td>
                 <td>{order.user.email}</td>
-                <td>{order.status}</td>
-                <td>₹{(order.totalMinor / 100).toLocaleString('en-IN')}</td>
+                <td>{humanizeEnum(order.status)}</td>
+                <td>{formatMinor(order.totalMinor)}</td>
               </tr>
             ))}
           </tbody>

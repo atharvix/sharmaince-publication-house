@@ -1,6 +1,7 @@
 import type { ApiUser } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+// Relative by default: in production nginx serves the API on the same origin.
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 const ORIGIN = BASE_URL.replace(/\/api\/?$/, '');
 
 /** Resolves a server-relative asset path (e.g. an uploaded cover image) against the API origin. */
@@ -40,7 +41,11 @@ export function setAuthHooks(next: AuthHooks) {
   hooks = next;
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+/**
+ * Exchanges the refresh cookie for a new access token. Concurrent callers share one
+ * request — the server rotates the refresh token on every use.
+ */
+export async function refreshAccessToken(): Promise<boolean> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       try {
@@ -75,7 +80,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await send(`${BASE_URL}${path}`, {
     method,
     headers,
     credentials: 'include',
@@ -87,15 +92,34 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (refreshed) return request<T>(path, { ...options, skipAuthRetry: true });
   }
 
+  return parseResponse<T>(res, 'Something went wrong. Please try again.');
+}
+
+/** fetch, with network failures turned into an ApiError the UI can show. */
+async function send(url: string, init: RequestInit) {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
+  }
+}
+
+async function parseResponse<T>(res: Response, fallbackMessage: string): Promise<T> {
   if (res.status === 204) return undefined as T;
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: { error?: { code: string; message: string; details?: unknown } } | null = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // Not JSON — e.g. a proxy's HTML error page. Fall through to the generic error.
+  }
 
   if (!res.ok) {
-    const error = data?.error ?? { code: 'UNKNOWN', message: 'Something went wrong' };
+    const error = data?.error ?? { code: 'UNKNOWN', message: fallbackMessage };
     throw new ApiError(res.status, error.code, error.message, error.details);
   }
+  if (data === null && text) throw new ApiError(res.status, 'BAD_RESPONSE', fallbackMessage);
 
   return data as T;
 }
@@ -115,20 +139,14 @@ async function uploadRequest<T>(path: string, fieldName: string, file: File, ski
   const headers: Record<string, string> = {};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, credentials: 'include', body: form });
+  const res = await send(`${BASE_URL}${path}`, { method: 'POST', headers, credentials: 'include', body: form });
 
   if (res.status === 401 && !skipAuthRetry) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return uploadRequest<T>(path, fieldName, file, true);
   }
 
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok) {
-    const error = data?.error ?? { code: 'UNKNOWN', message: 'Upload failed' };
-    throw new ApiError(res.status, error.code, error.message, error.details);
-  }
-  return data as T;
+  return parseResponse<T>(res, 'Upload failed. Please try again.');
 }
 
 /** Uploads a single file as multipart form data under `fieldName` (handles the same 401-refresh-retry as `api.*`). */

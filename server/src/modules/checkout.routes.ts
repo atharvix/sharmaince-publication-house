@@ -6,86 +6,90 @@ import { AppError } from '../lib/errors.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { priceCart } from './pricing.js';
-import { createRazorpayOrder, verifyPaymentSignature } from '../lib/razorpay.js';
-import { sendEmail, orderConfirmationEmail } from '../lib/email.js';
+import { addressSchema, type AddressInput } from '../lib/address.js';
+import { minorToRupees } from '../lib/money.js';
 import { recordAudit } from '../lib/audit.js';
+import { createRazorpayOrder, verifyPaymentSignature } from '../lib/razorpay.js';
+import { MAX_QUANTITY_PER_TITLE, priceCart, type PricedQuote } from './pricing.js';
+import { cancelUnpaidOrder, confirmPayment, markPaymentFailed } from './orders.service.js';
 import { env } from '../env.js';
 
 export const checkoutRouter = Router();
 checkoutRouter.use(requireAuth);
 
-const lineSchema = z.object({ bookId: z.string().min(1), quantity: z.coerce.number().int().min(1).max(20) });
-
-const quoteSchema = z.object({
-  body: z.object({ items: z.array(lineSchema).min(1), promotionCode: z.string().optional() }),
+const lineSchema = z.object({
+  bookId: z.string().min(1),
+  quantity: z.coerce.number().int().min(1).max(MAX_QUANTITY_PER_TITLE),
 });
+const itemsSchema = z.array(lineSchema).min(1).max(50);
+
+const quoteBody = z.object({ items: itemsSchema, promotionCode: z.string().trim().max(40).optional() });
 
 checkoutRouter.post(
   '/quote',
-  validate({ body: quoteSchema.shape.body }),
+  validate({ body: quoteBody }),
   asyncHandler(async (req, res) => {
-    const quote = await priceCart(req.body.items, req.body.promotionCode);
-    res.json({ quote: serializeQuote(quote) });
+    const { items, promotionCode } = req.body as z.infer<typeof quoteBody>;
+    res.json({ quote: serializeQuote(await priceCart(items, promotionCode)) });
   }),
 );
 
-const addressInput = z.object({
-  label: z.string().min(1).max(60),
-  fullName: z.string().min(1).max(120),
-  phone: z.string().min(6).max(20),
-  line1: z.string().min(1).max(200),
-  line2: z.string().max(200).optional(),
-  city: z.string().min(1).max(100),
-  state: z.string().min(1).max(100),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().min(1).max(100).default('India'),
-});
-
-const createOrderSchema = z.object({
-  body: z.object({
-    items: z.array(lineSchema).min(1),
-    promotionCode: z.string().optional(),
+const createOrderBody = z
+  .object({
+    items: itemsSchema,
+    promotionCode: z.string().trim().max(40).optional(),
     shippingAddressId: z.string().optional(),
-    shippingAddress: addressInput.optional(),
-  }).refine((data) => data.shippingAddressId || data.shippingAddress, {
-    message: 'A shipping address is required',
-  }),
-});
+    shippingAddress: addressSchema.optional(),
+  })
+  .refine((data) => data.shippingAddressId || data.shippingAddress, { message: 'A shipping address is required' });
 
 function generateOrderNumber() {
   const stamp = Date.now().toString(36).toUpperCase();
-  const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
   return `NAP-${stamp}-${random}`;
+}
+
+async function resolveShippingAddress(userId: string, body: z.infer<typeof createOrderBody>): Promise<AddressInput> {
+  if (!body.shippingAddressId) return body.shippingAddress!;
+  const saved = await prisma.address.findFirst({ where: { id: body.shippingAddressId, userId } });
+  if (!saved) throw AppError.notFound('Shipping address not found');
+  const { label, fullName, phone, line1, line2, city, state, postalCode, country } = saved;
+  return { label, fullName, phone, line1, line2: line2 ?? undefined, city, state, postalCode, country };
 }
 
 checkoutRouter.post(
   '/orders',
-  validate({ body: createOrderSchema.shape.body }),
+  validate({ body: createOrderBody }),
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
-    const quote = await priceCart(req.body.items, req.body.promotionCode);
-
-    let shippingAddress: z.infer<typeof addressInput>;
-    if (req.body.shippingAddressId) {
-      const saved = await prisma.address.findUnique({ where: { id: req.body.shippingAddressId } });
-      if (!saved || saved.userId !== userId) throw AppError.notFound('Shipping address not found');
-      shippingAddress = { ...saved, line2: saved.line2 ?? undefined };
-    } else {
-      shippingAddress = req.body.shippingAddress!;
-    }
-
+    const body = req.body as z.infer<typeof createOrderBody>;
+    const quote = await priceCart(body.items, body.promotionCode);
+    const shippingAddress = await resolveShippingAddress(userId, body);
     const orderNumber = generateOrderNumber();
+
+    // Created before the transaction: a gateway order that never gets a matching DB row is
+    // harmless (nobody can pay it), whereas the reverse would strand reserved stock.
+    const razorpayOrder = await createRazorpayOrder({ amountMinor: quote.totalMinor, currency: 'INR', receipt: orderNumber });
 
     const order = await prisma.$transaction(async (tx) => {
       for (const line of quote.lines) {
-        const result = await tx.book.updateMany({
-          where: { id: line.bookId, stockQuantity: { gte: line.quantity } },
+        const { count } = await tx.book.updateMany({
+          where: { id: line.bookId, status: 'PUBLISHED', stockQuantity: { gte: line.quantity } },
           data: { stockQuantity: { decrement: line.quantity } },
         });
-        if (result.count === 0) {
-          throw AppError.conflict(`"${line.title}" no longer has enough stock`);
-        }
+        if (count === 0) throw AppError.conflict(`"${line.title}" no longer has enough stock`);
+      }
+
+      if (quote.promotion) {
+        const { count } = await tx.promotion.updateMany({
+          where: {
+            id: quote.promotion.id,
+            isActive: true,
+            ...(quote.promotion.maxRedemptions !== null ? { redeemedCount: { lt: quote.promotion.maxRedemptions } } : {}),
+          },
+          data: { redeemedCount: { increment: 1 } },
+        });
+        if (count === 0) throw AppError.conflict('This promotion code has just run out — remove it and try again');
       }
 
       return tx.order.create({
@@ -110,29 +114,12 @@ checkoutRouter.post(
               lineTotalMinor: line.lineTotalMinor,
             })),
           },
+          payments: {
+            create: { razorpayOrderId: razorpayOrder.id, amountMinor: quote.totalMinor, currency: 'INR', status: 'CREATED' },
+          },
         },
         include: { items: true },
       });
-    });
-
-    if (quote.promotion) {
-      await prisma.promotion.update({ where: { id: quote.promotion.id }, data: { redeemedCount: { increment: 1 } } });
-    }
-
-    const razorpayOrder = await createRazorpayOrder({
-      amountMinor: order.totalMinor,
-      currency: order.currency,
-      receipt: order.orderNumber,
-    });
-
-    await prisma.payment.create({
-      data: {
-        orderId: order.id,
-        razorpayOrderId: razorpayOrder.id,
-        amountMinor: order.totalMinor,
-        currency: order.currency,
-        status: 'CREATED',
-      },
     });
 
     await recordAudit({ actorUserId: userId, action: 'ORDER_CREATED', entityType: 'Order', entityId: order.id });
@@ -150,86 +137,72 @@ checkoutRouter.post(
   }),
 );
 
-const verifySchema = z.object({
-  body: z.object({
-    orderId: z.string().min(1),
-    razorpayOrderId: z.string().min(1),
-    razorpayPaymentId: z.string().min(1),
-    razorpaySignature: z.string().min(1),
-  }),
+const verifyBody = z.object({
+  orderId: z.string().min(1),
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
 });
 
 checkoutRouter.post(
   '/verify',
-  validate({ body: verifySchema.shape.body }),
+  validate({ body: verifyBody }),
   asyncHandler(async (req, res) => {
-    const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+    const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body as z.infer<typeof verifyBody>;
 
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
-    if (!order || order.userId !== req.user!.id) throw AppError.notFound('Order not found');
+    const payment = await prisma.payment.findFirst({
+      where: { razorpayOrderId, orderId, order: { userId: req.user!.id } },
+      select: { id: true },
+    });
+    if (!payment) throw AppError.notFound('Order not found');
 
-    const payment = await prisma.payment.findUnique({ where: { razorpayOrderId } });
-    if (!payment || payment.orderId !== order.id) throw AppError.badRequest('Payment record not found for this order');
-
-    if (order.status === 'PAID' || order.status === 'PROCESSING') {
-      return res.json({ order, message: 'Payment already verified' });
-    }
-
-    const signatureValid = verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-    if (!signatureValid) {
-      await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+    if (!verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature)) {
+      await markPaymentFailed(razorpayOrderId);
       throw AppError.badRequest('Payment verification failed');
     }
 
-    const [updatedOrder] = await prisma.$transaction([
-      prisma.order.update({ where: { id: order.id }, data: { status: 'PAID', paidAt: new Date() }, include: { items: true } }),
-      prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: 'CAPTURED', razorpayPaymentId, razorpaySignature },
-      }),
-    ]);
+    const { outcome } = await confirmPayment({
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      source: 'checkout',
+      actorUserId: req.user!.id,
+    });
 
-    await recordAudit({ actorUserId: req.user!.id, action: 'ORDER_PAID', entityType: 'Order', entityId: order.id });
+    if (outcome === 'REFUNDED_LATE_PAYMENT') {
+      throw new AppError(
+        409,
+        'ORDER_EXPIRED',
+        'This order expired before your payment completed, so the payment has been refunded. Please place the order again.',
+      );
+    }
 
-    const totalDisplay = `₹${(updatedOrder.totalMinor / 100).toLocaleString('en-IN')}`;
-    const orderUrl = `${env.PUBLIC_WEB_URL}/account/orders/${updatedOrder.id}`;
-    const { subject, html, text } = orderConfirmationEmail(updatedOrder.orderNumber, totalDisplay, orderUrl);
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-    if (user) await sendEmail({ to: user.email, subject, html, text });
-
-    res.json({ order: updatedOrder });
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { items: true } });
+    res.json({ order, ...(outcome === 'ALREADY_PAID' ? { message: 'Payment already verified' } : {}) });
   }),
 );
 
 checkoutRouter.post(
   '/orders/:id/cancel',
   asyncHandler(async (req, res) => {
-    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
-    if (!order || order.userId !== req.user!.id) throw AppError.notFound('Order not found');
-    if (order.status !== 'PENDING_PAYMENT') {
+    const order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.user!.id }, select: { id: true } });
+    if (!order) throw AppError.notFound('Order not found');
+
+    if (!(await cancelUnpaidOrder(order.id, req.user!.id, 'cancelled by customer'))) {
       throw AppError.badRequest('Only orders awaiting payment can be cancelled this way');
     }
-
-    await prisma.$transaction(async (tx) => {
-      for (const item of order.items) {
-        await tx.book.update({ where: { id: item.bookId }, data: { stockQuantity: { increment: item.quantity } } });
-      }
-      await tx.order.update({ where: { id: order.id }, data: { status: 'CANCELLED', cancelledAt: new Date() } });
-    });
-
-    await recordAudit({ actorUserId: req.user!.id, action: 'ORDER_CANCELLED', entityType: 'Order', entityId: order.id });
     res.json({ message: 'Order cancelled' });
   }),
 );
 
-function serializeQuote(quote: Awaited<ReturnType<typeof priceCart>>) {
+function serializeQuote(quote: PricedQuote) {
   return {
     lines: quote.lines,
-    subtotal: quote.subtotalMinor / 100,
-    discount: quote.discountMinor / 100,
-    shipping: quote.shippingMinor / 100,
-    tax: quote.taxMinor / 100,
-    total: quote.totalMinor / 100,
-    promotion: quote.promotion,
+    subtotal: minorToRupees(quote.subtotalMinor),
+    discount: minorToRupees(quote.discountMinor),
+    shipping: minorToRupees(quote.shippingMinor),
+    tax: minorToRupees(quote.taxMinor),
+    total: minorToRupees(quote.totalMinor),
+    promotion: quote.promotion && { id: quote.promotion.id, code: quote.promotion.code },
   };
 }

@@ -5,10 +5,17 @@ import { AppError } from '../lib/errors.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { hashPassword, isStrongPassword, verifyPassword } from '../lib/password.js';
+import { hashPassword, passwordSchema, verifyPassword } from '../lib/password.js';
+import { addressSchema } from '../lib/address.js';
+import { pageMeta, paginate, paginationQuery } from '../lib/validation.js';
+import { revokeAllSessions } from './auth.routes.js';
 
 export const accountRouter = Router();
 accountRouter.use(requireAuth);
+
+function serializeProfile(user: { id: string; name: string; email: string; role: string }) {
+  return { id: user.id, name: user.name, email: user.email, role: user.role };
+}
 
 // ---------- Profile ----------
 
@@ -16,64 +23,45 @@ accountRouter.get(
   '/profile',
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
-    res.json({ profile: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    res.json({ profile: serializeProfile(user) });
   }),
 );
-
-const updateProfileSchema = z.object({ body: z.object({ name: z.string().min(2).max(120) }) });
 
 accountRouter.patch(
   '/profile',
-  validate({ body: updateProfileSchema.shape.body }),
+  validate({ body: z.object({ name: z.string().trim().min(2).max(120) }) }),
   asyncHandler(async (req, res) => {
     const user = await prisma.user.update({ where: { id: req.user!.id }, data: { name: req.body.name } });
-    res.json({ profile: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    res.json({ profile: serializeProfile(user) });
   }),
 );
 
-const changePasswordSchema = z.object({
-  body: z.object({
-    currentPassword: z.string().min(1),
-    newPassword: z.string().min(8).refine(isStrongPassword, {
-      message: 'Password must include an uppercase letter, a lowercase letter and a number',
-    }),
-  }),
-});
+const changePasswordBody = z.object({ currentPassword: z.string().min(1).max(200), newPassword: passwordSchema });
 
 accountRouter.post(
   '/change-password',
-  validate({ body: changePasswordSchema.shape.body }),
+  validate({ body: changePasswordBody }),
   asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body as z.infer<typeof changePasswordBody>;
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
-    const ok = await verifyPassword(req.body.currentPassword, user.passwordHash);
-    if (!ok) throw AppError.badRequest('Current password is incorrect');
+    if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+      throw AppError.badRequest('Current password is incorrect');
+    }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash: await hashPassword(req.body.newPassword),
-        refreshTokenVersion: { increment: 1 },
-      },
-    });
-    res.json({ message: 'Password updated' });
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(newPassword) } });
+    // Signs out every device, including this one, so a leaked session can't outlive the old password.
+    await revokeAllSessions(user.id);
+    res.json({ message: 'Password updated — please sign in again.' });
   }),
 );
 
 // ---------- Addresses ----------
 
-const addressSchema = z.object({
-  label: z.string().min(1).max(60),
-  fullName: z.string().min(1).max(120),
-  phone: z.string().min(6).max(20),
-  line1: z.string().min(1).max(200),
-  line2: z.string().max(200).optional(),
-  city: z.string().min(1).max(100),
-  state: z.string().min(1).max(100),
-  postalCode: z.string().min(1).max(20),
-  country: z.string().min(1).max(100).default('India'),
+const accountAddressSchema = addressSchema.extend({
   isDefaultShipping: z.boolean().optional(),
   isDefaultBilling: z.boolean().optional(),
 });
+type AccountAddressInput = Partial<z.infer<typeof accountAddressSchema>>;
 
 accountRouter.get(
   '/addresses',
@@ -83,39 +71,41 @@ accountRouter.get(
   }),
 );
 
+/** Saves an address, clearing the previous default(s) in the same transaction so there's only ever one. */
+function saveAddress(userId: string, data: AccountAddressInput, addressId?: string) {
+  return prisma.$transaction(async (tx) => {
+    if (data.isDefaultShipping) {
+      await tx.address.updateMany({ where: { userId, isDefaultShipping: true }, data: { isDefaultShipping: false } });
+    }
+    if (data.isDefaultBilling) {
+      await tx.address.updateMany({ where: { userId, isDefaultBilling: true }, data: { isDefaultBilling: false } });
+    }
+    return addressId
+      ? tx.address.update({ where: { id: addressId }, data })
+      : tx.address.create({ data: { ...(data as z.infer<typeof accountAddressSchema>), userId } });
+  });
+}
+
+async function assertOwnAddress(userId: string, addressId: string) {
+  const address = await prisma.address.findFirst({ where: { id: addressId, userId }, select: { id: true } });
+  if (!address) throw AppError.notFound('Address not found');
+}
+
 accountRouter.post(
   '/addresses',
-  validate({ body: addressSchema }),
+  validate({ body: accountAddressSchema }),
   asyncHandler(async (req, res) => {
-    if (req.body.isDefaultShipping) {
-      await prisma.address.updateMany({ where: { userId: req.user!.id }, data: { isDefaultShipping: false } });
-    }
-    if (req.body.isDefaultBilling) {
-      await prisma.address.updateMany({ where: { userId: req.user!.id }, data: { isDefaultBilling: false } });
-    }
-    const address = await prisma.address.create({ data: { ...req.body, userId: req.user!.id } });
+    const address = await saveAddress(req.user!.id, req.body);
     res.status(201).json({ address });
   }),
 );
 
-async function ownAddressOrThrow(userId: string, addressId: string) {
-  const address = await prisma.address.findUnique({ where: { id: addressId } });
-  if (!address || address.userId !== userId) throw AppError.notFound('Address not found');
-  return address;
-}
-
 accountRouter.patch(
   '/addresses/:id',
-  validate({ body: addressSchema.partial() }),
+  validate({ body: accountAddressSchema.partial() }),
   asyncHandler(async (req, res) => {
-    await ownAddressOrThrow(req.user!.id, req.params.id);
-    if (req.body.isDefaultShipping) {
-      await prisma.address.updateMany({ where: { userId: req.user!.id }, data: { isDefaultShipping: false } });
-    }
-    if (req.body.isDefaultBilling) {
-      await prisma.address.updateMany({ where: { userId: req.user!.id }, data: { isDefaultBilling: false } });
-    }
-    const address = await prisma.address.update({ where: { id: req.params.id }, data: req.body });
+    await assertOwnAddress(req.user!.id, req.params.id);
+    const address = await saveAddress(req.user!.id, req.body, req.params.id);
     res.json({ address });
   }),
 );
@@ -123,8 +113,8 @@ accountRouter.patch(
 accountRouter.delete(
   '/addresses/:id',
   asyncHandler(async (req, res) => {
-    await ownAddressOrThrow(req.user!.id, req.params.id);
-    await prisma.address.delete({ where: { id: req.params.id } });
+    const { count } = await prisma.address.deleteMany({ where: { id: req.params.id, userId: req.user!.id } });
+    if (count === 0) throw AppError.notFound('Address not found');
     res.status(204).send();
   }),
 );
@@ -147,7 +137,7 @@ accountRouter.post(
   '/wishlist',
   validate({ body: z.object({ bookId: z.string().min(1) }) }),
   asyncHandler(async (req, res) => {
-    const book = await prisma.book.findUnique({ where: { id: req.body.bookId } });
+    const book = await prisma.book.findFirst({ where: { id: req.body.bookId, status: 'PUBLISHED' }, select: { id: true } });
     if (!book) throw AppError.notFound('Book not found');
 
     const item = await prisma.wishlistItem.upsert({
@@ -162,35 +152,38 @@ accountRouter.post(
 accountRouter.delete(
   '/wishlist/:bookId',
   asyncHandler(async (req, res) => {
-    await prisma.wishlistItem
-      .delete({ where: { userId_bookId: { userId: req.user!.id, bookId: req.params.bookId } } })
-      .catch(() => null);
+    // Idempotent: removing something that isn't there is still a success.
+    await prisma.wishlistItem.deleteMany({ where: { userId: req.user!.id, bookId: req.params.bookId } });
     res.status(204).send();
   }),
 );
 
 // ---------- Orders ----------
 
+const ordersQuery = z.object(paginationQuery(50));
+
 accountRouter.get(
   '/orders',
+  validate({ query: ordersQuery }),
   asyncHandler(async (req, res) => {
-    const orders = await prisma.order.findMany({
-      where: { userId: req.user!.id },
-      include: { items: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ items: orders });
+    const { page, pageSize } = req.query as unknown as z.infer<typeof ordersQuery>;
+    const where = { userId: req.user!.id };
+    const [total, orders] = await Promise.all([
+      prisma.order.count({ where }),
+      prisma.order.findMany({ where, include: { items: true }, orderBy: { createdAt: 'desc' }, ...paginate(page, pageSize) }),
+    ]);
+    res.json({ items: orders, ...pageMeta(page, pageSize, total) });
   }),
 );
 
 accountRouter.get(
   '/orders/:id',
   asyncHandler(async (req, res) => {
-    const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, userId: req.user!.id },
       include: { items: true, payments: { select: { status: true, provider: true, createdAt: true } } },
     });
-    if (!order || order.userId !== req.user!.id) throw AppError.notFound('Order not found');
+    if (!order) throw AppError.notFound('Order not found');
     res.json({ order });
   }),
 );

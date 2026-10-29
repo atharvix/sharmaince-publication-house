@@ -65,7 +65,7 @@ export default function AdminAuthors() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className={styles.card}>
-          <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: '1fr 1fr' }}>
+          <div className="form-grid form-grid--2">
             <InputField id="a-name" name="name" label="Name" required defaultValue={editing?.name} />
             <InputField id="a-slug" name="slug" label="Slug" required defaultValue={editing?.slug} />
           </div>

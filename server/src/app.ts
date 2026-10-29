@@ -3,9 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
+import crypto from 'node:crypto';
+import { pinoHttp } from 'pino-http';
 import { env } from './env.js';
 import { prisma } from './lib/prisma.js';
+import { logger } from './lib/logger.js';
 import { UPLOADS_DIR } from './lib/storage.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { authRouter } from './modules/auth.routes.js';
@@ -25,11 +27,26 @@ import { adminReportsRouter } from './modules/admin.reports.routes.js';
 
 export function createApp() {
   const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', env.TRUST_PROXY);
 
+  app.use(
+    pinoHttp({
+      logger,
+      // Honour an upstream request id (load balancer) so logs can be correlated end to end.
+      genReqId: (req, res) => {
+        const incoming = req.headers['x-request-id'];
+        const id = typeof incoming === 'string' && /^[\w-]{1,128}$/.test(incoming) ? incoming : crypto.randomUUID();
+        res.setHeader('X-Request-Id', id);
+        return id;
+      },
+      customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info'),
+      autoLogging: { ignore: (req) => req.url === '/api/health' || req.url === '/api/ready' },
+    }),
+  );
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(compression());
-  if (env.NODE_ENV !== 'test') app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
   // Mounted before the global JSON body parser so the raw bytes survive for signature verification.
   app.use('/api/payments', express.raw({ type: 'application/json' }), paymentsRouter);
@@ -49,22 +66,8 @@ export function createApp() {
     express.static(UPLOADS_DIR, { maxAge: '7d', immutable: true, index: false, dotfiles: 'deny' }),
   );
 
-  // API identification document — this is a JSON API with no server-rendered UI at `/`.
-  app.get('/', (_req, res) => {
-    res.json({
-      name: 'nightingale-press-api',
-      status: 'ok',
-      docs: '/api/health for liveness, see server/API.md for the full route reference',
-    });
-  });
-
-  // Liveness: the process is up and able to respond. Exposed both bare and under
-  // /api so either convention works for load balancers / uptime checks.
-  app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+  // Liveness: the process is up. Readiness: it can also reach the database.
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
-
-  // Readiness: liveness plus a real database round-trip, without leaking connection
-  // details in the response.
   app.get('/api/ready', async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;

@@ -8,6 +8,7 @@ import { BookCover } from '../../components/ui/BookCover';
 import { Button } from '../../components/ui/Button';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AccountLayout.module.css';
+import { formatRupees } from '../../lib/format';
 
 export default function AccountWishlist() {
   const { addItem } = useCart();
@@ -51,7 +52,7 @@ export default function AccountWishlist() {
                     {book.title}
                   </Link>
                   <p style={{ color: 'var(--color-ink-500)', fontSize: 'var(--fs-sm)' }}>
-                    {book.author} · ₹{book.price.toLocaleString('en-IN')}
+                    {book.author} · {formatRupees(book.price)}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>

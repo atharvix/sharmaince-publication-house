@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import type { ApiOrder, ApiWishlistItem } from '../../types/api';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AccountLayout.module.css';
+import { formatMinor } from '../../lib/format';
 
 export default function AccountOverview() {
   const { data, loading, error, reload } = useFetch(
@@ -56,7 +57,7 @@ export default function AccountOverview() {
                   {new Date(order.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
               </span>
-              <span style={{ fontWeight: 600 }}>₹{(order.totalMinor / 100).toLocaleString('en-IN')}</span>
+              <span style={{ fontWeight: 600 }}>{formatMinor(order.totalMinor)}</span>
             </Link>
           ))}
         </div>
