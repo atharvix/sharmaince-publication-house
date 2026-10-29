@@ -402,3 +402,9 @@
   font-weight: 400;
   font-size: var(--fs-xl);
 }
+
+@media (min-width: 1500px) {
+  .books {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

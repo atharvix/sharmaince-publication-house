@@ -108,7 +108,8 @@
   --duration-slow: 380ms;
   --duration-reveal: 0ms;
 
-  --container-max: 1280px;
+  /* Wide enough that big monitors aren't mostly empty margin; text blocks set their own measure. */
+  --container-max: 1600px;
   /* Total height of the sticky header: one row on small screens, two on desktop */
   --header-height: 66px;
 }
