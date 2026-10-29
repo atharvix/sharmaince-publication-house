@@ -7,7 +7,8 @@
 
 @media (min-width: 1000px) {
   .spread {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* The words get the wider column; the books sit beside them. */
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
     gap: var(--space-7);
     align-items: center;
   }
@@ -247,8 +248,8 @@
  * The pile is laid out for five covers. With fewer, each count gets its own arrangement
  * so the covers fill the space instead of leaving gaps where the missing ones would be.
  */
-.pile[data-count='1'] { height: 560px; }
-.pile[data-count='1'] .cut1 { --w: 58%; --r: -3deg; left: 21%; top: 56px; }
+.pile[data-count='1'] { height: 420px; }
+.pile[data-count='1'] .cut1 { --w: 42%; --r: -5deg; left: 29%; top: 64px; }
 
 .pile[data-count='2'] { height: 500px; }
 .pile[data-count='2'] .cut { --w: 44%; }
@@ -262,8 +263,8 @@
 .pile[data-count='3'] .cut3 { left: 64%; top: 100px; }
 
 @media (max-width: 640px) {
-  .pile[data-count='1'] { height: 420px; }
-  .pile[data-count='1'] .cut1 { --w: 62%; left: 18%; top: 44px; }
+  .pile[data-count='1'] { height: 360px; }
+  .pile[data-count='1'] .cut1 { --w: 50%; left: 25%; top: 50px; }
   .pile[data-count='2'] { height: 380px; }
   .pile[data-count='3'] { height: 340px; }
 }

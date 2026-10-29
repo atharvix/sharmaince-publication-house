@@ -48,6 +48,8 @@ export interface ApiBook {
   coverImageUrl: string | null;
   featured: boolean;
   newRelease: boolean;
+  heroOrder: number | null;
+  heroNote: string | null;
   category: ApiCategory;
   authors: ApiAuthorRef[];
 }

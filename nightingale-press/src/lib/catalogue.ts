@@ -39,6 +39,8 @@ export function mapApiBook(book: ApiBook): Book {
     coverImageUrl: book.coverImageUrl,
     featured: book.featured,
     newRelease: book.newRelease,
+    heroOrder: book.heroOrder,
+    heroNote: book.heroNote,
   };
 }
 

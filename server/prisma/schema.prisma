@@ -192,6 +192,10 @@ model Book {
   coverImageUrl String?
   featured      Boolean       @default(false)
   newRelease    Boolean       @default(false)
+  // Home page hero: books with a position are shown there in that order (lowest first).
+  heroOrder     Int?
+  // The handwritten note beside the cover in the hero; empty shows price and pages.
+  heroNote      String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

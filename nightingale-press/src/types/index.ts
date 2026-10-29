@@ -24,6 +24,10 @@ export interface Book {
   coverImageUrl?: string | null;
   featured?: boolean;
   newRelease?: boolean;
+  /** Position in the home page hero (1 = first); null keeps it out of the hero. */
+  heroOrder?: number | null;
+  /** The handwritten note beside it in the hero; empty shows price and pages. */
+  heroNote?: string | null;
 }
 
 export interface Author {

@@ -52,6 +52,8 @@ const bookSchema = z.object({
   coverPalette: z.enum(['pine', 'amber', 'clay', 'slate']).default('pine'),
   featured: z.boolean().default(false),
   newRelease: z.boolean().default(false),
+  heroOrder: z.number().int().min(1).max(5).nullable().default(null),
+  heroNote: z.string().trim().max(40).nullable().default(null),
 });
 
 adminBooksRouter.post(
@@ -270,6 +272,8 @@ function serializeAdminBook(book: {
   coverImageUrl: string | null;
   featured: boolean;
   newRelease: boolean;
+  heroOrder: number | null;
+  heroNote: string | null;
   category: { id: string; name: string; slug: string };
   authors: { author: { id: string; slug: string; name: string } }[];
 }) {
@@ -294,6 +298,8 @@ function serializeAdminBook(book: {
     coverImageUrl: book.coverImageUrl,
     featured: book.featured,
     newRelease: book.newRelease,
+    heroOrder: book.heroOrder,
+    heroNote: book.heroNote,
     category: book.category,
     authors: book.authors.map((a) => a.author),
   };

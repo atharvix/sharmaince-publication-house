@@ -64,8 +64,10 @@ export default function Home() {
   const total = booksState.data?.total;
   const newEditions = books.filter((book) => book.newRelease);
   const featured = books.filter((book) => book.featured);
-  // The pile leads with new editions, then featured titles, then the rest.
-  const pile = [...new Set([...newEditions, ...featured, ...books])].slice(0, 5);
+  // Staff pick the hero books in Admin → Books. Until they do, it leads with new
+  // editions, then featured titles, then the rest.
+  const picked = books.filter((book) => book.heroOrder != null).sort((a, b) => a.heroOrder! - b.heroOrder!);
+  const pile = (picked.length > 0 ? picked : [...new Set([...newEditions, ...featured, ...books])]).slice(0, 5);
   const firstNew = pile.findIndex((b) => b.newRelease);
   const formats = [...new Set(books.map((book) => book.format.toLowerCase()))];
   // Subjects with no books yet would only lead to empty pages.
@@ -107,7 +109,7 @@ export default function Home() {
             <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatBookPrice(book.price)}`}>
               <BookCover book={book} />
               <span className={`${styles.callout} ${styles[`callout${index + 1}`]} hand`} aria-hidden="true">
-                {annotation(book, index)}
+                {book.heroNote || annotation(book, index)}
               </span>
               {index === firstNew && (
                 <span className={styles.burst} aria-hidden="true">
