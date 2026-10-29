@@ -122,7 +122,7 @@ export default function About() {
         {categoriesState.error && <ErrorBlock message={categoriesState.error} onRetry={categoriesState.reload} />}
         {categoriesState.data && (
           <ul className={styles.subjects}>
-            {categoriesState.data.map((category) => (
+            {categoriesState.data.filter((category) => (category.bookCount ?? 0) > 0).map((category) => (
               <li key={category.slug}>
                 <Link to={`/books?category=${encodeURIComponent(category.slug)}`} className={styles.subject}>
                   <span className={styles.dot} style={{ background: subjectColor(category.slug) }} aria-hidden="true" />

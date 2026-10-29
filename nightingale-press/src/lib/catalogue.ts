@@ -14,13 +14,18 @@ const FORMAT_LABEL: Record<ApiBook['format'], Book['format']> = {
   EBOOK: 'E-Book',
 };
 
+/** "A", "A & B", "A, B & C" */
+export function joinNames(names: string[]) {
+  return names.length <= 2 ? names.join(' & ') : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+}
+
 export function mapApiBook(book: ApiBook): Book {
   return {
     id: book.id,
     slug: book.slug,
     title: book.title,
     subtitle: book.subtitle ?? undefined,
-    author: book.authors.map((a) => a.name).join(' & '),
+    author: joinNames(book.authors.map((a) => a.name)),
     category: { name: book.category.name, slug: book.category.slug },
     price: book.price,
     edition: book.edition,

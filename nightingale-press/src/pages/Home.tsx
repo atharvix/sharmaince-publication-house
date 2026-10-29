@@ -39,7 +39,7 @@ function Shelf({ title, highlight, books, total }: { title: string; highlight: s
           {title} <span className={styles.ink}>{highlight}</span>
         </h2>
         <Link to="/books" className={styles.more}>
-          {total ? `All ${total} titles` : 'All titles'}
+          {total ? `All ${plural(total, 'title')}` : 'All titles'}
           <ArrowRight size={16} strokeWidth={2.5} aria-hidden="true" />
         </Link>
       </div>
@@ -50,6 +50,10 @@ function Shelf({ title, highlight, books, total }: { title: string; highlight: s
       </div>
     </section>
   );
+}
+
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
 export default function Home() {
@@ -64,6 +68,10 @@ export default function Home() {
   const pile = [...new Set([...newEditions, ...featured, ...books])].slice(0, 5);
   const firstNew = pile.findIndex((b) => b.newRelease);
   const formats = [...new Set(books.map((book) => book.format.toLowerCase()))];
+  // Subjects with no books yet would only lead to empty pages.
+  const subjects = categoriesState.data?.filter((category) => (category.bookCount ?? 0) > 0) ?? [];
+  // Featured titles that already appear on the new-editions shelf aren't repeated.
+  const moreFeatured = featured.filter((book) => !book.newRelease);
 
   return (
     <>
@@ -74,9 +82,9 @@ export default function Home() {
           </h1>
           {booksState.data && categoriesState.data && (
             <p className={styles.lede}>
-              {total} titles across {categoriesState.data.length} subjects
-              {formats.length > 0 && <>, in {new Intl.ListFormat('en', { type: 'conjunction' }).format(formats)}</>}. Every one shows its{' '}
-              <span className="highlight">edition, pages and price</span> up front.
+              {plural(total ?? 0, 'title')} across {plural(subjects.length, 'subject')}
+              {formats.length > 0 && <>, in {new Intl.ListFormat('en', { type: 'conjunction' }).format(formats)}</>}. Each book page shows its{' '}
+              <span className="highlight">edition, pages and price</span> as soon as they're announced.
             </p>
           )}
 
@@ -119,7 +127,7 @@ export default function Home() {
         <h2 className={styles.sticker}>Pick a subject</h2>
         {categoriesState.error && <ErrorBlock message={categoriesState.error} onRetry={categoriesState.reload} />}
         <ul className={styles.chips}>
-          {categoriesState.data?.map((category) => (
+          {subjects.map((category) => (
             <li key={category.slug}>
               <Link to={`/books?category=${encodeURIComponent(category.slug)}`} className={styles.chip}>
                 <span className={styles.dot} style={{ background: subjectColor(category.slug) }} aria-hidden="true" />
@@ -137,7 +145,7 @@ export default function Home() {
         </div>
       )}
       {newEditions.length > 0 && <Shelf title="Fresh off" highlight="the press" books={newEditions.slice(0, 4)} total={total} />}
-      {featured.length > 0 && <Shelf title="Featured" highlight="titles" books={featured.slice(0, 8)} total={total} />}
+      {moreFeatured.length > 0 && <Shelf title="Featured" highlight="titles" books={moreFeatured.slice(0, 8)} total={total} />}
 
       <section className={`container ${styles.proposalWrap}`}>
         <Link to="/authors#submit-manuscript" className={styles.proposal}>
