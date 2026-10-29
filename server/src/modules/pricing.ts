@@ -56,6 +56,9 @@ export async function priceCart(input: CartLineInput[], promotionCode?: string):
     if (!book || book.status !== 'PUBLISHED') {
       throw AppError.badRequest('One of the items in your cart is no longer available', { bookId: line.bookId });
     }
+    if (book.priceMinor === null) {
+      throw AppError.badRequest(`"${book.title}" isn't on sale yet`, { bookId: book.id });
+    }
     if (line.quantity > MAX_QUANTITY_PER_TITLE) {
       throw AppError.badRequest(`You can order at most ${MAX_QUANTITY_PER_TITLE} copies of "${book.title}"`);
     }

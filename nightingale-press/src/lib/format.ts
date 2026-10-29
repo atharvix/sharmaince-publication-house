@@ -6,6 +6,11 @@ export function formatRupees(amount: number) {
   return (Number.isInteger(amount) ? whole : fractional).format(amount);
 }
 
+/** A book's price, or a note for a title announced before it's priced. */
+export function formatBookPrice(price: number | null) {
+  return price === null ? 'Price coming soon' : formatRupees(price);
+}
+
 /** Formats paise as rupees, e.g. 123450 -> "₹1,234.50". */
 export function formatMinor(amountMinor: number) {
   return formatRupees(amountMinor / 100);

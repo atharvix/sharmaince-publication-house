@@ -33,12 +33,17 @@ const bookSchema = z.object({
   subtitle: z.string().trim().max(300).optional(),
   categoryId: z.string().min(1),
   authorIds: z.array(z.string().min(1)).min(1).max(20),
-  price: z.number().positive().max(1_000_000),
-  edition: z.string().trim().min(1).max(60),
+  price: z.number().positive().max(1_000_000).nullable().default(null),
+  edition: z.string().trim().min(1).max(60).nullable().default(null),
   format: z.enum(['PAPERBACK', 'HARDBOUND', 'EBOOK']),
   // Stored without hyphens or spaces so search and uniqueness don't depend on formatting.
-  isbn: z.string().transform((v) => v.replace(/[\s-]/g, '').toUpperCase()).pipe(z.string().regex(/^(\d{9}[\dX]|\d{13})$/, 'Must be a 10 or 13 digit ISBN')),
-  pages: z.number().int().positive().max(20_000),
+  isbn: z
+    .string()
+    .transform((v) => v.replace(/[\s-]/g, '').toUpperCase())
+    .pipe(z.string().regex(/^(\d{9}[\dX]|\d{13})$/, 'Must be a 10 or 13 digit ISBN'))
+    .nullable()
+    .default(null),
+  pages: z.number().int().positive().max(20_000).nullable().default(null),
   status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
   availability: z.enum(['IN_STOCK', 'PRE_ORDER', 'OUT_OF_STOCK']).default('IN_STOCK'),
   stockQuantity: z.number().int().min(0).default(0),
@@ -57,7 +62,7 @@ adminBooksRouter.post(
     const book = await prisma.book.create({
       data: {
         ...rest,
-        priceMinor: rupeesToMinor(price),
+        priceMinor: price === null ? null : rupeesToMinor(price),
         authors: { create: authorIds.map((authorId: string) => ({ authorId })) },
       },
       include: { category: true, authors: { include: { author: true } } },
@@ -83,7 +88,7 @@ adminBooksRouter.patch(
       }
       return tx.book.update({
         where: { id: req.params.id },
-        data: { ...rest, ...(price !== undefined ? { priceMinor: rupeesToMinor(price) } : {}) },
+        data: { ...rest, ...(price !== undefined ? { priceMinor: price === null ? null : rupeesToMinor(price) } : {}) },
         include: { category: true, authors: { include: { author: true } } },
       });
     });
@@ -250,12 +255,12 @@ function serializeAdminBook(book: {
   slug: string;
   title: string;
   subtitle: string | null;
-  priceMinor: number;
+  priceMinor: number | null;
   currency: string;
-  edition: string;
+  edition: string | null;
   format: string;
-  isbn: string;
-  pages: number;
+  isbn: string | null;
+  pages: number | null;
   status: string;
   availability: string;
   stockQuantity: number;
@@ -273,7 +278,7 @@ function serializeAdminBook(book: {
     slug: book.slug,
     title: book.title,
     subtitle: book.subtitle,
-    price: book.priceMinor / 100,
+    price: book.priceMinor === null ? null : book.priceMinor / 100,
     currency: book.currency,
     edition: book.edition,
     format: book.format,

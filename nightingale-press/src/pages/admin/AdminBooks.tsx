@@ -140,11 +140,12 @@ export default function AdminBooks() {
       subtitle: String(form.get('subtitle') || '') || undefined,
       categoryId: String(form.get('categoryId')),
       authorIds,
-      price: Number(form.get('price')),
-      edition: String(form.get('edition')),
+      // Price, edition, ISBN and pages can be filled in later; empty means "not known yet".
+      price: form.get('price') ? Number(form.get('price')) : null,
+      edition: String(form.get('edition') || '') || null,
       format: String(form.get('format')),
-      isbn: String(form.get('isbn')),
-      pages: Number(form.get('pages')),
+      isbn: String(form.get('isbn') || '') || null,
+      pages: form.get('pages') ? Number(form.get('pages')) : null,
       status: String(form.get('status')),
       availability: String(form.get('availability')),
       stockQuantity: Number(form.get('stockQuantity')),
@@ -281,10 +282,10 @@ export default function AdminBooks() {
           </div>
 
           <div className="form-grid form-grid--4" style={{ marginTop: 'var(--space-4)' }}>
-            <InputField id="b-price" name="price" type="number" step="0.01" label="Price (₹)" required defaultValue={editing?.price} />
-            <InputField id="b-edition" name="edition" label="Edition" required defaultValue={editing?.edition ?? draft?.edition ?? undefined} />
-            <InputField id="b-isbn" name="isbn" label="ISBN" required defaultValue={editing?.isbn ?? draft?.isbn ?? undefined} />
-            <InputField id="b-pages" name="pages" type="number" label="Pages" required defaultValue={editing?.pages} />
+            <InputField id="b-price" name="price" type="number" step="0.01" label="Price (₹)" defaultValue={editing?.price ?? undefined} hint="Leave empty to list it as 'price coming soon'." />
+            <InputField id="b-edition" name="edition" label="Edition" defaultValue={editing?.edition ?? draft?.edition ?? undefined} />
+            <InputField id="b-isbn" name="isbn" label="ISBN" defaultValue={editing?.isbn ?? draft?.isbn ?? undefined} />
+            <InputField id="b-pages" name="pages" type="number" label="Pages" defaultValue={editing?.pages ?? undefined} />
           </div>
 
           <div className="form-grid form-grid--3" style={{ marginTop: 'var(--space-4)' }}>
@@ -380,7 +381,7 @@ export default function AdminBooks() {
                   {!book.coverImageUrl && <span className={styles.noCover}>No photo</span>}
                 </td>
                 <td>{book.category.name}</td>
-                <td>{formatRupees(book.price)}</td>
+                <td>{book.price === null ? 'Not set' : formatRupees(book.price)}</td>
                 <td>{book.stockQuantity}</td>
                 <td>{humanizeEnum(book.status)}</td>
                 <td style={{ display: 'flex', gap: 'var(--space-2)' }}>

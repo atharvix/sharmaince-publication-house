@@ -30,7 +30,7 @@ COPY --chown=node:node prisma ./prisma
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 EXPOSE 4000
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s CMD wget -qO- http://127.0.0.1:4000/api/health || exit 1
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --start-interval=1s CMD wget -qO- http://127.0.0.1:4000/api/health || exit 1
 # Migrations are a separate release step (`npm run prisma:deploy`, see docker-compose.yml),
 # not part of startup, so several replicas never race to migrate.
 CMD ["node", "dist/index.js"]

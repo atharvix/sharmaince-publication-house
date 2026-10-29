@@ -8,7 +8,7 @@ import { BookCover } from '../../components/ui/BookCover';
 import { Button } from '../../components/ui/Button';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AccountLayout.module.css';
-import { formatRupees } from '../../lib/format';
+import { formatBookPrice } from '../../lib/format';
 
 export default function AccountWishlist() {
   const { addItem } = useCart();
@@ -24,7 +24,8 @@ export default function AccountWishlist() {
 
   function handleMoveToCart(item: ApiWishlistItem) {
     const book = mapApiBook(item.book);
-    addItem(snapshotFromBook(book), 1);
+    if (book.price === null) return;
+    addItem(snapshotFromBook({ ...book, price: book.price }), 1);
     handleRemove(item.bookId);
   }
 
@@ -52,11 +53,11 @@ export default function AccountWishlist() {
                     {book.title}
                   </Link>
                   <p style={{ color: 'var(--color-ink-500)', fontSize: 'var(--fs-sm)' }}>
-                    {book.author} · {formatRupees(book.price)}
+                    {book.author} · {formatBookPrice(book.price)}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <Button size="sm" variant="primary" type="button" onClick={() => handleMoveToCart(item)}>
+                  <Button size="sm" variant="primary" type="button" disabled={book.price === null} onClick={() => handleMoveToCart(item)}>
                     Move to cart
                   </Button>
                   <Button size="sm" variant="ghost" type="button" onClick={() => handleRemove(item.bookId)}>

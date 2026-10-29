@@ -7,7 +7,7 @@ export interface CartBookSnapshot {
   title: string;
   author: string;
   price: number;
-  edition: string;
+  edition: string | null;
   format: Book['format'];
   coverPalette: Book['coverPalette'];
 }
@@ -45,7 +45,8 @@ function isCartLine(value: unknown): value is CartLine {
   );
 }
 
-export function snapshotFromBook(book: Book): CartBookSnapshot {
+/** Only priced books can go in the cart; callers check `book.price` first. */
+export function snapshotFromBook(book: Book & { price: number }): CartBookSnapshot {
   return {
     id: book.id,
     slug: book.slug,

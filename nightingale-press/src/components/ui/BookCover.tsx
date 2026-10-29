@@ -39,7 +39,7 @@ export function BookCover({ book, size = 'md' }: BookCoverProps) {
         <p className={styles.author}>{book.author}</p>
       </div>
       <p className={styles.note}>
-        <span>{book.edition.replace(/ Edition$/, ' ed.')}</span>
+        <span>{book.edition?.replace(/ Edition$/, ' ed.') ?? book.format}</span>
         <span>cover to come</span>
       </p>
     </div>

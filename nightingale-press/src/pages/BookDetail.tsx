@@ -15,7 +15,7 @@ import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { Button } from '../components/ui/Button';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import styles from './BookDetail.module.css';
-import { formatRupees } from '../lib/format';
+import { formatBookPrice } from '../lib/format';
 
 const AVAILABILITY_CLASS: Record<Book['availability'], string> = {
   'In Stock': styles.inStock,
@@ -72,10 +72,12 @@ export default function BookDetail() {
   }
 
   const { book, related } = data;
-  const canOrder = book.availability !== 'Out of Stock';
+  const priced = book.price !== null;
+  const canOrder = priced && book.availability !== 'Out of Stock';
 
   function handleAddToCart() {
-    addItem(snapshotFromBook(book), quantity);
+    if (book.price === null) return;
+    addItem(snapshotFromBook({ ...book, price: book.price }), quantity);
     setAdded(true);
   }
 
@@ -97,12 +99,15 @@ export default function BookDetail() {
     }
   }
 
-  const details: [string, string][] = [
-    ['Edition', book.edition],
-    ['Format', book.format],
-    ['Pages', String(book.pages)],
-    ['ISBN', book.isbn],
-  ];
+  // Edition, pages and ISBN may not be announced yet; only show what's known.
+  const details = (
+    [
+      ['Edition', book.edition],
+      ['Format', book.format],
+      ['Pages', book.pages ? String(book.pages) : null],
+      ['ISBN', book.isbn],
+    ] satisfies [string, string | null][]
+  ).filter((row): row is [string, string] => row[1] !== null);
 
   return (
     <div className="container">
@@ -146,7 +151,7 @@ export default function BookDetail() {
 
           <div className={styles.buy}>
             <div className={styles.priceRow}>
-              <span className={`${styles.price} hand`}>{formatRupees(book.price)}</span>
+              <span className={`${styles.price} hand`}>{formatBookPrice(book.price)}</span>
               <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>{book.availability}</span>
             </div>
 
@@ -168,7 +173,7 @@ export default function BookDetail() {
                 </button>
               </div>
               <Button size="md" variant="primary" disabled={!canOrder} onClick={handleAddToCart}>
-                {canOrder ? 'Add to cart' : 'Out of stock'}
+                {canOrder ? 'Add to cart' : priced ? 'Out of stock' : 'Not on sale yet'}
               </Button>
               <Button size="md" variant="outline" disabled={wishlistBusy} onClick={handleWishlist}>
                 {wishlisted ? 'Saved' : 'Save for later'}

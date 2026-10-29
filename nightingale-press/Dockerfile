@@ -14,3 +14,5 @@ FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
+# The rolling deploy waits for this before sending traffic to a new container.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --start-interval=1s CMD wget -qO /dev/null http://127.0.0.1/ || exit 1

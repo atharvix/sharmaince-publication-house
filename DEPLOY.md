@@ -168,7 +168,7 @@ Set these values. Anything not listed can stay as it is in the example.
 | `NODE_ENV` | `production` |
 | `CORS_ORIGIN` | `<SITE_URL>` (exactly, no trailing slash) |
 | `PUBLIC_WEB_URL` | `<SITE_URL>` |
-| `TRUST_PROXY` | `2` (Cloudflare and nginx are the two proxies in front of the API) |
+| `TRUST_PROXY` | `3`: Cloudflare, then the `edge` and `web` nginx containers, sit in front of the API (`2` while visitors reach the server directly on the LAN) |
 | `JWT_ACCESS_SECRET` | output of `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | a **different** `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | add this line, with the output of `openssl rand -hex 24` |
@@ -263,15 +263,29 @@ docker compose logs --tail 50 migrate
 systemctl status cloudflared --no-pager
 ```
 
-**Ship an update:**
+**Ship an update (the site stays up):**
 
 ```bash
-cd ~/night-prod
-git pull                          # or copy over a fresh bundle, as in step 3
-cd server && docker compose up -d --build
+~/night-prod/server/scripts/deploy.sh            # latest commit of the current branch
+~/night-prod/server/scripts/deploy.sh main       # or another branch
 ```
 
-Database migrations run automatically before the new API starts.
+It backs up first, builds while the old version keeps serving, migrates the database, then
+replaces the API and the website one container at a time: the new one has to pass its
+health check before the old one is stopped, and the old one finishes the requests it is
+handling. The `edge` proxy holds the public port the whole time and retries a refused
+connection on the other container. If a new container fails its health check, it is removed
+and the current version keeps running. The database is never restarted. Tested locally with
+traffic running: 4,056 requests across two deploys, none failed.
+
+Do **not** use `docker compose up -d --build` on the live server: it restarts the site's
+containers together, and visitors get errors for 10 to 20 seconds.
+
+**Database changes must work with the old code too.** For a few seconds the old and new API
+run side by side on the same database, and if a deploy is rolled back the old code runs on the
+new schema. So a migration may add tables, add columns that are nullable or have a default, or
+relax constraints. Removing or renaming a column takes two deploys: first ship code that no
+longer uses it, then drop it in the next release.
 
 **Restart or stop:** `docker compose restart` / `docker compose down`. Your data is kept in
 Docker volumes. Never add `-v` to `down`: that deletes the database.

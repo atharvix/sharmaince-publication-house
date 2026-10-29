@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { fetchBooks, fetchCategories } from '../lib/catalogue';
 import { useFetch } from '../hooks/useFetch';
-import { formatRupees } from '../lib/format';
+import { formatBookPrice } from '../lib/format';
 import { subjectColor } from '../lib/subjects';
 import type { Book } from '../types';
 import { BookCard } from '../components/ui/BookCard';
@@ -26,9 +26,9 @@ function Go() {
 
 /** What gets written next to each cover in the pile: always real catalogue data. */
 function annotation(book: Book, index: number) {
-  if (index === 0) return `${formatRupees(book.price)} · ${book.pages} pp`;
-  if (index === 2) return `${book.edition.replace(/ Edition$/, ' ed.')}, ${book.pages} pages`;
-  return formatRupees(book.price);
+  if (index === 0 && book.pages) return `${formatBookPrice(book.price)} · ${book.pages} pp`;
+  if (index === 2 && book.edition && book.pages) return `${book.edition.replace(/ Edition$/, ' ed.')}, ${book.pages} pages`;
+  return formatBookPrice(book.price);
 }
 
 function Shelf({ title, highlight, books, total }: { title: string; highlight: string; books: Book[]; total?: number }) {
@@ -96,7 +96,7 @@ export default function Home() {
         <div className={styles.pile} aria-label="New and featured titles">
           {booksState.loading && <LoadingBlock label="Loading titles…" />}
           {pile.map((book, index) => (
-            <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatRupees(book.price)}`}>
+            <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatBookPrice(book.price)}`}>
               <BookCover book={book} />
               <span className={`${styles.callout} ${styles[`callout${index + 1}`]} hand`} aria-hidden="true">
                 {annotation(book, index)}

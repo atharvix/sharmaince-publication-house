@@ -34,12 +34,12 @@ export interface ApiBook {
   slug: string;
   title: string;
   subtitle: string | null;
-  price: number;
+  price: number | null;
   currency: string;
-  edition: string;
+  edition: string | null;
   format: ApiFormat;
-  isbn: string;
-  pages: number;
+  isbn: string | null;
+  pages: number | null;
   availability: ApiAvailability;
   inStock: boolean;
   description: string;

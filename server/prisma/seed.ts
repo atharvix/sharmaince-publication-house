@@ -11,6 +11,7 @@ const CATEGORIES = [
   'Anatomy & Physiology',
   'Paramedical Sciences',
   'Mental Health Nursing',
+  'Psychology & Sociology',
 ] as const;
 
 function slugify(value: string) {
@@ -58,7 +59,9 @@ const FAQS = [
 ] as const;
 
 async function main() {
-  console.log('Seeding categories & authors...');
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  console.log('Seeding subjects...');
   const categoryBySlug = new Map<string, string>();
   for (const name of CATEGORIES) {
     const category = await prisma.category.upsert({
@@ -69,13 +72,29 @@ async function main() {
     categoryBySlug.set(name, category.id);
   }
 
+  console.log('Seeding FAQs...');
+  for (const [index, faq] of FAQS.entries()) {
+    await prisma.faq.upsert({
+      where: { id: `seed-faq-${index}` },
+      update: {},
+      create: { id: `seed-faq-${index}`, ...faq, sortOrder: index },
+    });
+  }
+
+  if (isProduction) {
+    // The demo authors, books, logins (published passwords) and promotion are made up.
+    // A live catalogue is entered in Admin → Books; admins come from `npm run create-admin`.
+    console.log('Seed complete (subjects and FAQs only in production).');
+    return;
+  }
+
+  console.log('Seeding demo authors and books...');
   const authorBySlug = new Map<string, string>();
   for (const author of AUTHORS) {
     const created = await prisma.author.upsert({ where: { slug: author.slug }, update: {}, create: author });
     authorBySlug.set(author.slug, created.id);
   }
 
-  console.log('Seeding books...');
   for (const book of BOOKS) {
     const { authors, category, price, ...rest } = book;
     const categoryId = categoryBySlug.get(category)!;
@@ -91,21 +110,6 @@ async function main() {
         authors: { create: authorIds.map((authorId) => ({ authorId })) },
       },
     });
-  }
-
-  console.log('Seeding FAQs...');
-  for (const [index, faq] of FAQS.entries()) {
-    await prisma.faq.upsert({
-      where: { id: `seed-faq-${index}` },
-      update: {},
-      create: { id: `seed-faq-${index}`, ...faq, sortOrder: index },
-    });
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    // Demo logins have published passwords; production admins are created with `npm run create-admin`.
-    console.log('Seed complete (catalogue only — demo accounts and promotions are skipped in production).');
-    return;
   }
 
   console.log('Seeding demo accounts...');

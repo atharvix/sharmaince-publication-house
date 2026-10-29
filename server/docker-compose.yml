@@ -1,5 +1,6 @@
 # Local stack. `docker compose up -d postgres` for backend development, or
 # `docker compose up --build` for the full stack (site on http://localhost:8080).
+# On a live server, update with `scripts/deploy.sh` instead: it swaps containers one at a time.
 # Credentials here are development defaults; set POSTGRES_PASSWORD in the environment
 # (or a compose .env file) anywhere that isn't your own machine.
 services:
@@ -70,6 +71,16 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+
+  # Owns the public port and forwards to `web`. Deploys replace web and api one container
+  # at a time behind it (scripts/deploy.sh), so the site never stops answering.
+  edge:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    volumes:
+      - ./deploy/edge.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - '127.0.0.1:${WEB_PORT:-8080}:80'
 

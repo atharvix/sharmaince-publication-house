@@ -175,12 +175,14 @@ model Book {
   categoryId    String
   category      Category      @relation(fields: [categoryId], references: [id])
   authors       BookAuthor[]
-  priceMinor    Int
+  // Price, edition, ISBN and pages can come after a book is announced; a book with no
+  // price is listed but can't be bought (see pricing.ts).
+  priceMinor    Int?
   currency      String        @default("INR")
-  edition       String
+  edition       String?
   format        BookFormat
-  isbn          String        @unique
-  pages         Int
+  isbn          String?       @unique
+  pages         Int?
   status        BookStatus    @default(PUBLISHED)
   availability  Availability  @default(IN_STOCK)
   stockQuantity Int           @default(0)

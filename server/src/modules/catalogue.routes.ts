@@ -42,9 +42,9 @@ catalogueRouter.get(
 
     const orderBy =
       sort === 'price-asc'
-        ? { priceMinor: 'asc' as const }
+        ? { priceMinor: { sort: 'asc' as const, nulls: 'last' as const } }
         : sort === 'price-desc'
-          ? { priceMinor: 'desc' as const }
+          ? { priceMinor: { sort: 'desc' as const, nulls: 'last' as const } }
           : sort === 'title-asc'
             ? { title: 'asc' as const }
             : { featured: 'desc' as const };
@@ -131,12 +131,12 @@ function serializeBook(book: {
   slug: string;
   title: string;
   subtitle: string | null;
-  priceMinor: number;
+  priceMinor: number | null;
   currency: string;
-  edition: string;
+  edition: string | null;
   format: string;
-  isbn: string;
-  pages: number;
+  isbn: string | null;
+  pages: number | null;
   availability: string;
   stockQuantity: number;
   description: string;
@@ -153,7 +153,7 @@ function serializeBook(book: {
     slug: book.slug,
     title: book.title,
     subtitle: book.subtitle,
-    price: book.priceMinor / 100,
+    price: book.priceMinor === null ? null : book.priceMinor / 100,
     currency: book.currency,
     edition: book.edition,
     format: book.format,
