@@ -28,7 +28,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <AuthLayout eyebrow="Password reset" title="Forgot your password?" subtitle="We'll email you a link to reset it.">
+    <AuthLayout title="Forgot your password?" subtitle="We'll email you a link to reset it.">
       {submitted ? (
         <SuccessPanel
           title="Check your inbox"

@@ -46,11 +46,13 @@ const schema = z
     // Unpaid orders release their reserved stock after this many minutes.
     PENDING_ORDER_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 
+    // Optional: lets staff fill a new book's details from its cover photo (src/lib/coverReader.ts).
+    ANTHROPIC_API_KEY: z.string().default(''),
     SMTP_HOST: z.string().default(''),
     SMTP_PORT: z.coerce.number().default(587),
     SMTP_USER: z.string().default(''),
     SMTP_PASSWORD: z.string().default(''),
-    EMAIL_FROM: z.string().default('Nightingale Academic Press <no-reply@nightingalepress.example>'),
+    EMAIL_FROM: z.string().default('Sharmiance Publication House <no-reply@sharmiance.example>'),
 
     PUBLIC_WEB_URL: z.string().url().default('http://localhost:5173'),
     UPLOADS_DIR: z.string().default('uploads'),

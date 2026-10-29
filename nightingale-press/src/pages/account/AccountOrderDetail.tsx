@@ -6,6 +6,7 @@ import { OrderTimeline } from '../../components/ui/OrderTimeline';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AccountLayout.module.css';
 import { formatMinor } from '../../lib/format';
+import { ExternalLink } from 'lucide-react';
 
 export default function AccountOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +41,8 @@ export default function AccountOrderDetail() {
           </p>
           {order.trackingUrl && (
             <a href={order.trackingUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-700)', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
-              Track shipment →
+              Track shipment
+              <ExternalLink size={14} strokeWidth={2.25} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-2px', marginLeft: 4 }} />
             </a>
           )}
         </div>

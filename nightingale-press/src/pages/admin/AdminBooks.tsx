@@ -9,36 +9,103 @@ import { BookCover } from '../../components/ui/BookCover';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AdminLayout.module.css';
 import { formatRupees, humanizeEnum } from '../../lib/format';
+import { ImageOff } from 'lucide-react';
 
 interface AdminBook extends ApiBook {
   stockQuantity: number;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 }
 
+interface PrintedAuthor {
+  name: string;
+  credentials: string | null;
+  bio: string | null;
+  existingId: string | null;
+}
+
+/** What POST /admin/books/read-cover found on a cover photo. */
+interface CoverRead {
+  cover: string;
+  readingEnabled: boolean;
+  details: {
+    title: string;
+    subtitle: string | null;
+    slug: string;
+    isbn: string | null;
+    edition: string | null;
+    description: string;
+    highlights: string[];
+    categoryId: string | null;
+    authors: PrintedAuthor[];
+  } | null;
+}
+
+function dataUrlToFile(dataUrl: string, name: string) {
+  const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
+  return new File([bytes], name, { type: 'image/jpeg' });
+}
+
+function slugify(text: string) {
+  return text.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 160);
+}
+
 export default function AdminBooks() {
   const { data: books, loading, error, reload } = useFetch(() => api.get<{ items: AdminBook[] }>('/admin/books').then((r) => r.items), []);
   const { data: categories } = useFetch(() => api.get<{ items: ApiCategory[] }>('/admin/books/meta/categories').then((r) => r.items), []);
-  const { data: authors } = useFetch(() => api.get<{ items: ApiAuthorRef[] }>('/admin/books/meta/authors').then((r) => r.items), []);
+  const { data: authors, reload: reloadAuthors } = useFetch(() => api.get<{ items: ApiAuthorRef[] }>('/admin/books/meta/authors').then((r) => r.items), []);
 
   const [editing, setEditing] = useState<AdminBook | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // A cover chosen while creating a book; it's uploaded right after the book is saved.
+  const [pendingCover, setPendingCover] = useState<{ file: File; url: string } | null>(null);
+  // Details read off that cover. The form is uncontrolled, so a new read re-keys it to apply them.
+  const [draft, setDraft] = useState<CoverRead['details']>(null);
+  const [draftKey, setDraftKey] = useState(0);
+  const [coverNote, setCoverNote] = useState<string | null>(null);
+
+  function clearPendingCover() {
+    if (pendingCover?.url.startsWith('blob:')) URL.revokeObjectURL(pendingCover.url);
+    setPendingCover(null);
+  }
 
   function openCreate() {
     setEditing(null);
+    clearPendingCover();
+    setDraft(null);
+    setCoverNote(null);
     setFormError(null);
     setShowForm(true);
   }
 
   function openEdit(book: AdminBook) {
     setEditing(book);
+    setDraft(null);
+    setCoverNote(null);
     setFormError(null);
     setShowForm(true);
   }
 
   async function handleCoverUpload(file: File) {
-    if (!editing) return;
+    if (!editing) {
+      // The server crops and cleans the photo, and reads the details off it when it can.
+      setCoverNote('Reading the cover…');
+      const read = await apiUpload.post<CoverRead>('/admin/books/read-cover', 'cover', file).catch((err) => {
+        setCoverNote(null);
+        throw err;
+      });
+      clearPendingCover();
+      setPendingCover({ file: dataUrlToFile(read.cover, 'cover.jpg'), url: read.cover });
+      if (read.details) {
+        setDraft(read.details);
+        setDraftKey((key) => key + 1);
+        setCoverNote('Filled in from the cover. Check it, then add the price, pages and stock.');
+      } else {
+        setCoverNote(read.readingEnabled ? "Couldn't read the details off this cover; please type them in." : null);
+      }
+      return;
+    }
     const res = await apiUpload.post<{ book: AdminBook }>(`/admin/books/${editing.id}/cover`, 'cover', file);
     setEditing(res.book);
     reload();
@@ -61,6 +128,7 @@ export default function AdminBooks() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const authorIds = form.getAll('authorIds').map(String);
+    const newAuthors = form.getAll('newAuthors').map((index) => draft!.authors[Number(index)]);
     const highlights = String(form.get('highlights') || '')
       .split('\n')
       .map((line) => line.trim())
@@ -82,7 +150,6 @@ export default function AdminBooks() {
       stockQuantity: Number(form.get('stockQuantity')),
       description: String(form.get('description')),
       highlights,
-      coverPalette: String(form.get('coverPalette')),
       featured: form.get('featured') === 'on',
       newRelease: form.get('newRelease') === 'on',
     };
@@ -93,16 +160,43 @@ export default function AdminBooks() {
       if (editing) {
         await api.patch(`/admin/books/${editing.id}`, payload);
       } else {
-        await api.post('/admin/books', payload);
+        for (const author of newAuthors) {
+          const res = await api.post<{ author: { id: string } }>('/admin/books/meta/authors', {
+            slug: slugify(author.name.replace(/^(dr|prof|professor)\.?\s+/i, '')),
+            name: author.name,
+            credentials: author.credentials || 'Author',
+            bio: author.bio || author.credentials || `Author of ${payload.title}.`,
+          });
+          payload.authorIds.push(res.author.id);
+        }
+        const created = await api.post<{ book: AdminBook }>('/admin/books', payload);
+        if (pendingCover) {
+          try {
+            await apiUpload.post(`/admin/books/${created.book.id}/cover`, 'cover', pendingCover.file);
+          } catch (err) {
+            // The book exists now; reopen it so the cover can be retried without retyping everything.
+            setEditing(created.book);
+            setFormError(`Book saved, but the cover didn't upload: ${err instanceof ApiError ? err.message : 'please try again.'}`);
+            clearPendingCover();
+            reload();
+            return;
+          }
+          clearPendingCover();
+        }
       }
       setShowForm(false);
+      setDraft(null);
+      setCoverNote(null);
       reload();
+      reloadAuthors();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Could not save this book.');
     } finally {
       setSaving(false);
     }
   }
+
+  const missingCovers = books?.filter((book) => !book.coverImageUrl).length ?? 0;
 
   if (loading) return <LoadingBlock label="Loading books…" />;
   if (error || !books) return <ErrorBlock message={error ?? 'Could not load books.'} onRetry={reload} />;
@@ -119,32 +213,32 @@ export default function AdminBooks() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className={styles.card}>
+        <form key={draftKey} onSubmit={handleSubmit} className={styles.card}>
           <div className="form-grid form-grid--aside" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-4)' }}>
-            {editing ? (
-              <ImageUpload
-                label="Cover image"
-                value={resolveAssetUrl(editing.coverImageUrl)}
-                onUpload={handleCoverUpload}
-                onRemove={editing.coverImageUrl ? handleCoverRemove : undefined}
-                hint="JPEG, PNG or WebP, up to 5MB. Falls back to the cover palette below when none is set."
-              />
-            ) : (
-              <div>
-                <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>Cover image</p>
-                <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-ink-500)' }}>
-                  Save this book first, then reopen it to upload a cover image.
+            <ImageUpload
+              label="Cover photo"
+              value={editing ? resolveAssetUrl(editing.coverImageUrl) : pendingCover?.url}
+              onUpload={handleCoverUpload}
+              onRemove={editing ? (editing.coverImageUrl ? handleCoverRemove : undefined) : pendingCover ? async () => clearPendingCover() : undefined}
+              hint={
+                editing
+                  ? 'A photo or scan of the front cover. JPEG, PNG or WebP, up to 5MB. Shown on every page that lists this book.'
+                  : 'Start here: a photo or scan of the cover, or the whole wraparound. It is cropped to the front cover and the details below are filled in for you.'
+              }
+            />
+            <div style={{ display: 'grid', gap: 'var(--space-4)', alignContent: 'start' }}>
+              {coverNote && (
+                <p role="status" className={styles.coverNotice} style={{ margin: 0 }}>
+                  {coverNote}
                 </p>
-              </div>
-            )}
-            <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-              <InputField id="b-title" name="title" label="Title" required defaultValue={editing?.title} />
-              <InputField id="b-slug" name="slug" label="Slug" required defaultValue={editing?.slug} hint="Used in the book's URL." />
+              )}
+              <InputField id="b-title" name="title" label="Title" required defaultValue={editing?.title ?? draft?.title} />
+              <InputField id="b-slug" name="slug" label="Slug" required defaultValue={editing?.slug ?? draft?.slug} hint="Used in the book's URL." />
             </div>
           </div>
-          <InputField id="b-subtitle" name="subtitle" label="Subtitle" defaultValue={editing?.subtitle ?? ''} />
-          <div className="form-grid form-grid--3" style={{ marginTop: 'var(--space-4)' }}>
-            <SelectField id="b-category" name="categoryId" label="Category" required defaultValue={editing?.category.id ?? ''}>
+          <InputField id="b-subtitle" name="subtitle" label="Subtitle" defaultValue={editing?.subtitle ?? draft?.subtitle ?? ''} />
+          <div className="form-grid form-grid--2" style={{ marginTop: 'var(--space-4)' }}>
+            <SelectField id="b-category" name="categoryId" label="Category" required defaultValue={editing?.category.id ?? draft?.categoryId ?? ''}>
               <option value="" disabled>
                 Select
               </option>
@@ -159,12 +253,6 @@ export default function AdminBooks() {
               <option value="HARDBOUND">Hardbound</option>
               <option value="EBOOK">E-Book</option>
             </SelectField>
-            <SelectField id="b-cover" name="coverPalette" label="Cover palette" required defaultValue={editing?.coverPalette ?? 'pine'}>
-              <option value="pine">Pine</option>
-              <option value="amber">Amber</option>
-              <option value="clay">Clay</option>
-              <option value="slate">Slate</option>
-            </SelectField>
           </div>
 
           <div style={{ marginTop: 'var(--space-4)' }}>
@@ -176,18 +264,26 @@ export default function AdminBooks() {
                     type="checkbox"
                     name="authorIds"
                     value={author.id}
-                    defaultChecked={editing?.authors.some((a) => a.id === author.id)}
+                    defaultChecked={editing ? editing.authors.some((a) => a.id === author.id) : draft?.authors.some((a) => a.existingId === author.id)}
                   />
                   {author.name}
                 </label>
               ))}
+              {draft?.authors.map((author, index) =>
+                author.existingId ? null : (
+                  <label key={author.name} style={{ display: 'flex', gap: 'var(--space-2)', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>
+                    <input type="checkbox" name="newAuthors" value={index} defaultChecked />
+                    {author.name} (new, added on save)
+                  </label>
+                ),
+              )}
             </div>
           </div>
 
           <div className="form-grid form-grid--4" style={{ marginTop: 'var(--space-4)' }}>
             <InputField id="b-price" name="price" type="number" step="0.01" label="Price (₹)" required defaultValue={editing?.price} />
-            <InputField id="b-edition" name="edition" label="Edition" required defaultValue={editing?.edition} />
-            <InputField id="b-isbn" name="isbn" label="ISBN" required defaultValue={editing?.isbn} />
+            <InputField id="b-edition" name="edition" label="Edition" required defaultValue={editing?.edition ?? draft?.edition ?? undefined} />
+            <InputField id="b-isbn" name="isbn" label="ISBN" required defaultValue={editing?.isbn ?? draft?.isbn ?? undefined} />
             <InputField id="b-pages" name="pages" type="number" label="Pages" required defaultValue={editing?.pages} />
           </div>
 
@@ -215,7 +311,7 @@ export default function AdminBooks() {
           </div>
 
           <div style={{ marginTop: 'var(--space-4)' }}>
-            <TextareaField id="b-description" name="description" label="Description" required defaultValue={editing?.description} />
+            <TextareaField id="b-description" name="description" label="Description" required defaultValue={editing?.description ?? draft?.description} />
           </div>
           <div style={{ marginTop: 'var(--space-4)' }}>
             <TextareaField
@@ -223,7 +319,7 @@ export default function AdminBooks() {
               name="highlights"
               label="Highlights"
               hint="One per line"
-              defaultValue={editing?.highlights.join('\n')}
+              defaultValue={(editing?.highlights ?? draft?.highlights)?.join('\n')}
             />
           </div>
 
@@ -234,6 +330,13 @@ export default function AdminBooks() {
             </Button>
           </div>
         </form>
+      )}
+
+      {missingCovers > 0 && (
+        <p className={styles.coverNotice}>
+          <ImageOff size={18} strokeWidth={2} aria-hidden="true" />
+          {missingCovers} of {books.length} books {missingCovers === 1 ? 'has' : 'have'} no cover photo yet. The site shows a plain stand-in for these until one is uploaded.
+        </p>
       )}
 
       {books.length === 0 ? (
@@ -264,15 +367,18 @@ export default function AdminBooks() {
                       book={{
                         title: book.title,
                         author: book.authors.map((a) => a.name).join(' & '),
-                        coverPalette: book.coverPalette,
                         coverImageUrl: book.coverImageUrl,
+                        category: book.category,
                         edition: book.edition,
                         format: book.format === 'PAPERBACK' ? 'Paperback' : book.format === 'HARDBOUND' ? 'Hardbound' : 'E-Book',
                       }}
                     />
                   </div>
                 </td>
-                <td>{book.title}</td>
+                <td>
+                  {book.title}
+                  {!book.coverImageUrl && <span className={styles.noCover}>No photo</span>}
+                </td>
                 <td>{book.category.name}</td>
                 <td>{formatRupees(book.price)}</td>
                 <td>{book.stockQuantity}</td>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Check } from 'lucide-react';
 import { Button } from './Button';
 import styles from './SuccessPanel.module.css';
 
@@ -13,7 +14,7 @@ export function SuccessPanel({ title, body, resetLabel, onReset }: SuccessPanelP
   return (
     <div className={styles.panel}>
       <div className={styles.icon} aria-hidden="true">
-        ✓
+        <Check size={26} strokeWidth={2.25} />
       </div>
       <h3 className={styles.title}>{title}</h3>
       <p className={styles.body}>{body}</p>

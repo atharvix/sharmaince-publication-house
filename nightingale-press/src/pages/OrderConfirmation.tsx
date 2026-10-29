@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import { formatMinor } from '../lib/format';
+import { Check } from 'lucide-react';
 
 export default function OrderConfirmation() {
   const { id } = useParams<{ id: string }>();
@@ -31,10 +32,9 @@ export default function OrderConfirmation() {
             display: 'grid',
             placeItems: 'center',
             margin: '0 auto var(--space-5)',
-            fontSize: '1.75rem',
           }}
         >
-          ✓
+          <Check size={28} strokeWidth={2.5} aria-hidden="true" />
         </div>
         <h1 style={{ fontSize: 'var(--fs-2xl)' }}>Order confirmed</h1>
         <p style={{ marginTop: 'var(--space-3)', color: 'var(--color-ink-500)' }}>

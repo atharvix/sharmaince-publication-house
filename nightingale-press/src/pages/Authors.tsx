@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 import { fetchAuthors } from '../lib/catalogue';
 import { useFetch } from '../hooks/useFetch';
 import { api, ApiError } from '../lib/api';
 import { PageHero } from '../components/ui/PageHero';
 import { SectionHeading } from '../components/ui/SectionHeading';
 import { Button } from '../components/ui/Button';
-import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import { InputField, SelectField, TextareaField } from '../components/ui/FormField';
 import { SuccessPanel } from '../components/ui/SuccessPanel';
@@ -34,7 +34,7 @@ const GUIDELINES = [
   },
   {
     title: 'What happens next',
-    body: 'Submissions are acknowledged within a few days, and initial review typically takes 4–6 weeks. You will hear from our editorial team either way.',
+    body: 'Our editorial team replies to every proposal by email, whether or not it is a fit.',
   },
 ];
 
@@ -77,8 +77,8 @@ export default function Authors() {
   return (
     <>
       <PageHero
-        title="Our Authors"
-        subtitle="Nightingale titles are written by practising faculty and clinicians — people who teach the subject, and often still practise it."
+        title="Authors"
+        subtitle="The faculty and clinicians who write Sharmiance titles, and how to send us a proposal of your own."
         trail={[{ label: 'Authors' }]}
       />
 
@@ -86,74 +86,64 @@ export default function Authors() {
         {loading && <LoadingBlock label="Loading authors…" />}
         {error && <ErrorBlock message={error} onRetry={reload} />}
         {authors && (
-          <div className={styles.grid}>
-            {authors.map((author, index) => (
-              <Reveal key={author.slug} delay={index * 60} className={styles.card}>
-                <div className={styles.avatar} aria-hidden="true">
+          <ul className={styles.directory}>
+            {authors.map((author) => (
+              <li key={author.slug} className={styles.entry}>
+                <span className={styles.monogram} aria-hidden="true">
                   {initials(author.name)}
+                </span>
+                <div className={styles.who}>
+                  <h2 className={styles.name}>{author.name}</h2>
+                  <p className={styles.credentials}>{author.credentials}</p>
                 </div>
-                <h2 className={styles.name}>{author.name}</h2>
-                <p className={styles.credentials}>{author.credentials}</p>
                 <p className={styles.bio}>{author.bio}</p>
-                <div className={styles.bookLinks}>
-                  {author.books.map((book) => (
-                    <Link key={book.slug} to={`/books/${book.slug}`} className={styles.bookChip}>
-                      {book.title}
-                    </Link>
-                  ))}
-                </div>
-              </Reveal>
+                {author.books.length > 0 && (
+                  <ul className={styles.books} aria-label={`Books by ${author.name}`}>
+                    {author.books.map((book) => (
+                      <li key={book.slug}>
+                        <Link to={`/books/${book.slug}`} className={styles.bookLink}>
+                          <BookOpen size={16} strokeWidth={1.9} aria-hidden="true" />
+                          {book.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-
-        <Reveal className={styles.ctaBand}>
-          <h2 className={styles.ctaTitle}>Have a manuscript in progress?</h2>
-          <p className={styles.ctaBody}>
-            We are actively reviewing proposals in nursing, paramedical sciences and allied-health
-            subjects. Here is what we look for and how to submit.
-          </p>
-          <Button to="#submit-manuscript" variant="outline" size="md">
-            Jump to Submission Form
-          </Button>
-        </Reveal>
       </section>
 
-      <section className={`container ${styles.section}`}>
-        <Reveal>
-          <SectionHeading eyebrow="Submission Guidelines" title="What to know before you submit" />
-        </Reveal>
-        <div style={{ height: 'var(--space-7)' }} />
-        <div className={styles.grid}>
-          {GUIDELINES.map((item, index) => (
-            <Reveal key={item.title} delay={index * 70} className={styles.card}>
-              <h3 className={styles.name}>{item.title}</h3>
-              <p className={styles.bio}>{item.body}</p>
-            </Reveal>
-          ))}
+      <section id="submit-manuscript" className={`container ${styles.submit}`} style={{ scrollMarginTop: 'calc(var(--header-height) + 16px)' }}>
+        <div className={styles.guide}>
+          <SectionHeading title="Send us a proposal" subtitle="This starts a conversation with our editorial team. It doesn't commit you to anything." />
+          <ol className={styles.steps}>
+            {GUIDELINES.map((item, index) => (
+              <li key={item.title} className={styles.step}>
+                <span className={styles.stepNumber} aria-hidden="true">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
-      </section>
 
-      <section id="submit-manuscript" className={`container ${styles.section}`} style={{ scrollMarginTop: 'calc(var(--header-height) + 16px)' }}>
-        <Reveal>
-          <SectionHeading
-            eyebrow="Submit a Proposal"
-            title="Tell us about your manuscript"
-            subtitle="This starts a conversation with our editorial team — it does not commit you to anything."
-          />
-        </Reveal>
-        <div style={{ height: 'var(--space-7)' }} />
-        <Reveal className={styles.card} as="div">
+        <div className={styles.formCard}>
           {submitted ? (
             <SuccessPanel
-              title="Thank you — we've received your proposal"
-              body="Our editorial team acknowledges every submission and typically completes an initial review within 4–6 weeks."
+              title="Thank you, we've received your proposal"
+              body="Our editorial team will reply to the email address you gave."
               resetLabel="Submit another proposal"
               onReset={() => setSubmitted(false)}
             />
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: '640px' }}>
-              <div className="form-grid form-grid--2" style={{ gap: 'var(--space-5)' }}>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <div className="form-grid form-grid--2">
                 <InputField id="author-name" name="name" label="Full name" required placeholder="Dr. Jane Doe" />
                 <InputField id="author-email" name="email" type="email" label="Email address" required placeholder="you@institution.edu" />
               </div>
@@ -174,15 +164,19 @@ export default function Authors() {
                 label="Brief synopsis"
                 required
                 placeholder="A short paragraph on scope, intended audience and what makes it distinct."
-                hint="No confidential or unpublished clinical data, please — this is a first-contact summary only."
+                hint="Please don't include confidential or unpublished clinical data. This is a first-contact summary only."
               />
-              {submitError && <p style={{ color: 'var(--color-error)', fontSize: 'var(--fs-sm)' }}>{submitError}</p>}
+              {submitError && (
+                <p className={styles.error} role="alert">
+                  {submitError}
+                </p>
+              )}
               <Button type="submit" size="lg" variant="primary" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit Proposal'}
+                {submitting ? 'Sending…' : 'Send proposal'}
               </Button>
             </form>
           )}
-        </Reveal>
+        </div>
       </section>
     </>
   );

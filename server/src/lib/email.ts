@@ -37,7 +37,7 @@ function escapeHtml(value: string) {
 export function passwordResetEmail(resetUrl: string) {
   const url = escapeHtml(resetUrl);
   return {
-    subject: 'Reset your Nightingale Academic Press password',
+    subject: 'Reset your Sharmiance Publication House password',
     text: `We received a request to reset your password. Use this link within 1 hour: ${resetUrl}\n\nIf you did not request this, you can safely ignore this email.`,
     html: `<p>We received a request to reset your password.</p><p><a href="${url}">Reset your password</a> (expires in 1 hour)</p><p>If you did not request this, you can safely ignore this email.</p>`,
   };

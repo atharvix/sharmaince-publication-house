@@ -1,114 +1,171 @@
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import { PageHero } from '../components/ui/PageHero';
 import { SectionHeading } from '../components/ui/SectionHeading';
-import { StatStrip } from '../components/ui/StatStrip';
-import { Reveal } from '../components/ui/Reveal';
 import { Button } from '../components/ui/Button';
-import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
+import { ErrorBlock } from '../components/ui/RequestState';
 import { useFetch } from '../hooks/useFetch';
-import { fetchBooks, fetchCategories, fetchAuthors, fetchContentPage } from '../lib/catalogue';
+import { fetchCategories, fetchContentPage } from '../lib/catalogue';
 import { cmsRichText } from '../lib/cms';
+import { subjectColor } from '../lib/subjects';
 import styles from './About.module.css';
 
-const PILLARS = [
-  { icon: '🎓', title: 'Faculty-led development', body: 'Every title begins with educators who teach the subject, not just write about it.' },
-  { icon: '🩺', title: 'Clinical review', body: 'Practising clinicians review content for accuracy against current practice standards.' },
-  { icon: '📦', title: 'Dependable fulfilment', body: 'From a single copy to a full institutional order, we take delivery and support seriously.' },
+const SERVICES = [
+  { name: 'Publishing', what: 'We support authors and organizations in bringing their manuscripts and educational content to publication with professional care and attention to quality.' },
+  { name: 'Distribution', what: 'We make published books available through an organized distribution network, connecting publications with bookstores, institutions, retailers and readers.' },
+  { name: 'Author & institutional support', what: 'We work closely with authors, educators and institutions to understand their publishing requirements and provide suitable solutions.' },
+  { name: 'Promotion & outreach', what: 'We support the visibility of publications through promotional and outreach activities, helping books reach their intended audiences.' },
+];
+
+const MISSION = [
+  'To publish quality and meaningful content.',
+  'To provide professional support to authors and institutions.',
+  'To develop an efficient and reliable distribution network.',
+  'To make books accessible to a wider audience.',
+  'To build lasting relationships with authors, partners, retailers and readers.',
+];
+
+const VALUES = ['Quality', 'Professionalism', 'Reliability', 'Reach', 'Author support'];
+
+const AUDIENCES = [
+  { who: 'Students', what: 'Find the edition your course asks for, with pages and price shown up front.', to: '/books', action: 'Browse the catalogue' },
+  { who: 'Faculty', what: 'Review a title before adopting it for your class.', to: '/contact?reason=inspection', action: 'Request an inspection copy' },
+  { who: 'Institutions', what: 'Order for a college, library or bookstore with a single quote.', to: '/bulk-orders', action: 'Get a bulk quote' },
 ];
 
 export default function About() {
-  const booksState = useFetch(() => fetchBooks({ pageSize: 1 }), []);
   const categoriesState = useFetch(() => fetchCategories(), []);
-  const authorsState = useFetch(() => fetchAuthors(), []);
-  const statsLoading = booksState.loading || categoriesState.loading || authorsState.loading;
-  const statsError = booksState.error || categoriesState.error || authorsState.error;
-  const statsReady = booksState.data && categoriesState.data && authorsState.data;
 
-  // The About page's own layout (hero, pillars, CTA) is hand-built; CMS content only
-  // overrides the intro paragraph and can append extra sections, so a draft CMS edit
-  // never removes the built-in structure.
+  // The page's own layout is hand-built; CMS content only overrides the title and intro
+  // and can append extra sections, so a draft CMS edit never removes the built-in structure.
   const { data: cms } = useFetch(() => fetchContentPage('about'), []);
 
   return (
     <>
       <PageHero
-        title={cms?.title ?? 'About Nightingale Academic Press'}
-        subtitle="We publish nursing, medical and allied-health textbooks written with the people who teach them."
-        trail={[{ label: 'About Us' }]}
+        title={cms?.title ?? 'About us'}
+        subtitle="A publishing and distribution company bringing quality books and educational content to readers through a professional, reliable publishing network."
+        trail={[{ label: 'About' }]}
       />
 
+      {cms?.intro && (
+        <section className={`container ${styles.section}`}>
+          <p className={styles.intro}>{cms.intro}</p>
+        </section>
+      )}
+
       <section className={`container ${styles.section}`}>
-        <Reveal>
-          {cms?.intro ? (
-            <p className={styles.intro}>{cms.intro}</p>
-          ) : (
-            <p className={styles.intro}>
-              Nightingale Academic Press exists for one reason: students preparing for clinical
-              careers deserve textbooks that match how the subject is actually taught and practised.
-              We work directly with faculty to plan, write and review every title, and with
-              institutions to make sure the right books reach the right classrooms.
-            </p>
-          )}
-        </Reveal>
+        <div className={styles.story}>
+          <p>
+            We work with authors, educators, institutions and publishing partners to turn valuable ideas into well-presented
+            publications, and to make them available across diverse markets.
+          </p>
+          <p>
+            Books are more than printed pages. They are how knowledge, creativity, experience and ideas get shared. Our
+            publishing and distribution work is built around quality, professionalism, timely service and long-term
+            relationships, so that authors, institutions, retailers and readers get a smooth, dependable experience from
+            publication to distribution.
+          </p>
+        </div>
       </section>
 
-      <div className="container">
-        <Reveal>
-          {statsLoading && <LoadingBlock label="Loading catalogue statistics…" />}
-          {statsError && <ErrorBlock message={statsError} />}
-          {statsReady && (
-            <StatStrip
-              stats={[
-                { value: String(booksState.data!.total), label: 'Titles in print' },
-                { value: String(categoriesState.data!.length), label: 'Subject areas' },
-                { value: String(authorsState.data!.length), label: 'Contributing authors' },
-              ]}
-            />
-          )}
-        </Reveal>
-      </div>
+      <section className={`container ${styles.section}`}>
+        <SectionHeading title="What we do" />
+        <ol className={styles.services}>
+          {SERVICES.map((service) => (
+            <li key={service.name} className={styles.service}>
+              <h3>{service.name}</h3>
+              <p>{service.what}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section className={`container ${styles.section}`}>
-        <Reveal>
-          <SectionHeading center eyebrow="How we work" title="What every title has in common" />
-        </Reveal>
-        <div style={{ height: 'var(--space-7)' }} />
-        <div className={styles.pillarGrid}>
-          {PILLARS.map((pillar, index) => (
-            <Reveal key={pillar.title} delay={index * 80} className={styles.pillarCard}>
-              <div className={styles.pillarIcon} aria-hidden="true">
-                {pillar.icon}
-              </div>
-              <h3>{pillar.title}</h3>
-              <p style={{ marginTop: 'var(--space-2)', color: 'var(--color-ink-500)', fontSize: 'var(--fs-sm)' }}>
-                {pillar.body}
-              </p>
-            </Reveal>
-          ))}
+        <div className={styles.purpose}>
+          <div>
+            <h2 className={styles.purposeTitle}>Our vision</h2>
+            <p className={styles.vision}>
+              To build a trusted publishing and distribution platform that encourages knowledge, creativity and a strong
+              culture of reading.
+            </p>
+          </div>
+          <div>
+            <h2 className={styles.purposeTitle}>Our mission</h2>
+            <ul className={styles.mission}>
+              {MISSION.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
         </div>
+      </section>
+
+      <section className={`container ${styles.section}`}>
+        <SectionHeading title="Who we publish for" />
+        <ul className={styles.audiences}>
+          {AUDIENCES.map((audience) => (
+            <li key={audience.who} className={styles.audience}>
+              <h3>{audience.who}</h3>
+              <p>{audience.what}</p>
+              <Link to={audience.to} className={styles.audienceLink}>
+                {audience.action}
+                <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={`container ${styles.section}`}>
+        <SectionHeading title="What we publish" subtitle="Every subject in the catalogue, with the number of titles in each." />
+        {categoriesState.error && <ErrorBlock message={categoriesState.error} onRetry={categoriesState.reload} />}
+        {categoriesState.data && (
+          <ul className={styles.subjects}>
+            {categoriesState.data.map((category) => (
+              <li key={category.slug}>
+                <Link to={`/books?category=${encodeURIComponent(category.slug)}`} className={styles.subject}>
+                  <span className={styles.dot} style={{ background: subjectColor(category.slug) }} aria-hidden="true" />
+                  <span className={styles.subjectName}>{category.name}</span>
+                  <span className={styles.subjectCount}>
+                    {category.bookCount ?? 0} {category.bookCount === 1 ? 'title' : 'titles'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {cms && cms.sections.length > 0 && (
         <section className={`container ${styles.section}`}>
-          {cms.sections.map((section, index) => (
-            <Reveal key={section.heading} delay={index * 60}>
-              <SectionHeading center title={section.heading} />
-              <div style={{ maxWidth: '68ch', margin: '0 auto', color: 'var(--color-ink-700)' }}>
-                {cmsRichText(section.body)}
-              </div>
-            </Reveal>
+          {cms.sections.map((section) => (
+            <div key={section.heading} className={styles.cmsSection}>
+              <SectionHeading title={section.heading} />
+              <div className={styles.cmsBody}>{cmsRichText(section.body)}</div>
+            </div>
           ))}
         </section>
       )}
 
-      <section className={`container ${styles.section}`} style={{ textAlign: 'center' }}>
-        <Reveal>
-          <SectionHeading center title="Want to work with us?" subtitle="Whether you're an author, an institution or a learner — we'd like to hear from you." />
-          <div style={{ marginTop: 'var(--space-6)' }}>
-            <Button to="/contact" size="lg" variant="primary">
-              Get in Touch
-            </Button>
+      <section className={`container ${styles.section}`}>
+        <div className={styles.contact}>
+          <div>
+            <h2 className={styles.contactTitle}>Why choose Sharmiance?</h2>
+            <ul className={styles.values}>
+              {VALUES.map((value) => (
+                <li key={value}>{value}</li>
+              ))}
+            </ul>
+            <p>
+              Every publication is a chance to share knowledge and ideas. We handle every project with care, transparency
+              and professionalism, from publishing to distribution.
+            </p>
           </div>
-        </Reveal>
+          <Button to="/contact" size="md" variant="primary">
+            Get in touch
+          </Button>
+        </div>
       </section>
     </>
   );

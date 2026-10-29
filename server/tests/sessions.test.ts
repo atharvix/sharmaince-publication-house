@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
+import sharp from 'sharp';
 import { prisma } from '../src/lib/prisma.js';
 import { adminLogin, app, registerCustomer, uniqueEmail } from './helpers.js';
 
@@ -88,5 +89,18 @@ describe('cover uploads', () => {
       .set('Authorization', `Bearer ${await adminLogin()}`)
       .attach('cover', Buffer.from('<script>alert(1)</script>'), { filename: 'cover.png', contentType: 'image/png' });
     expect(res.status).toBe(415);
+  });
+
+  it('crops a wraparound cover photo down to its front panel', async () => {
+    const wraparound = await sharp({ create: { width: 1536, height: 1024, channels: 3, background: '#1d3b8f' } }).jpeg().toBuffer();
+    const res = await request(app)
+      .post('/api/admin/books/read-cover')
+      .set('Authorization', `Bearer ${await adminLogin()}`)
+      .attach('cover', wraparound, { filename: 'wrap.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(200);
+
+    const cover = await sharp(Buffer.from(res.body.cover.split(',')[1], 'base64')).metadata();
+    expect(cover.format).toBe('jpeg');
+    expect(cover.width! / cover.height!).toBeCloseTo(0.7, 1);
   });
 });

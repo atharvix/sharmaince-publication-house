@@ -1,9 +1,10 @@
 import multer from 'multer';
 import { AppError } from '../lib/errors.js';
 
-export const MAX_COVER_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+// Generous so a straight-off-the-phone photo works; covers are re-encoded to ~200KB before storage.
+export const MAX_COVER_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB
 
-/** Buffers the upload in memory (covers are small); the content is checked in `detectImageExtension`. */
+/** Buffers the upload in memory; the content is checked in `detectImageExtension`. */
 export const coverImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_COVER_IMAGE_BYTES, files: 1 },

@@ -38,7 +38,7 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout eyebrow="Welcome back" title="Log in to your account" subtitle="Track orders, manage your wishlist and check out faster.">
+    <AuthLayout title="Log in to your account" subtitle="Track orders, manage your wishlist and check out faster.">
       <form className={styles.form} onSubmit={handleSubmit}>
         {notice && !error && <p className={styles.noticeBanner} role="status">{notice}</p>}
         <InputField id="login-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />

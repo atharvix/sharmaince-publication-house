@@ -62,7 +62,7 @@ export function openRazorpayCheckout(input: OpenRazorpayCheckoutInput): Promise<
           amount: input.amountMinor,
           currency: input.currency,
           order_id: input.orderId,
-          name: 'Nightingale Academic Press',
+          name: 'Sharmiance Publication House',
           description: 'Book order',
           prefill: { name: input.customerName, email: input.customerEmail },
           theme: { color: '#0e5c56' },

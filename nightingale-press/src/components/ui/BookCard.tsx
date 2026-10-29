@@ -15,16 +15,14 @@ export function BookCard({ book }: { book: Book }) {
     <Link to={`/books/${book.slug}`} className={styles.card}>
       <div className={styles.coverWrap}>
         <BookCover book={book} />
+        {book.newRelease && <span className={styles.sticker}>New</span>}
       </div>
       <div className={styles.meta}>
-        <p className={styles.category}>{book.category.name}</p>
         <h3 className={styles.title}>{book.title}</h3>
         <p className={styles.author}>{book.author}</p>
         <div className={styles.footerRow}>
-          <span className={styles.price}>{formatRupees(book.price)}</span>
-          <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>
-            {book.availability}
-          </span>
+          <span className={`${styles.price} hand`}>{formatRupees(book.price)}</span>
+          <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>{book.availability}</span>
         </div>
       </div>
     </Link>

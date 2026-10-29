@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAdminTheme, ADMIN_THEMES } from '../../context/AdminThemeContext';
 import type { Role } from '../../types/api';
 import styles from './AdminLayout.module.css';
+import { ArrowLeft } from 'lucide-react';
 
 interface NavItem {
   to: string;
@@ -56,7 +57,7 @@ export default function AdminLayout() {
             N
           </span>
           <div>
-            <p className={styles.brandTitle}>Nightingale</p>
+            <p className={styles.brandTitle}>Sharmiance</p>
             <p className={styles.brandSubtitle}>{user?.role === 'ADMIN' ? 'Admin Workspace' : 'Staff Workspace'}</p>
           </div>
         </div>
@@ -93,7 +94,8 @@ export default function AdminLayout() {
           </select>
 
           <NavLink to="/" className={styles.footerLink}>
-            ← Back to site
+            <ArrowLeft size={16} strokeWidth={2.25} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-3px', marginRight: 6 }} />
+            Back to site
           </NavLink>
 
           {user && (

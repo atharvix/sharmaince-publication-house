@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import type { ApiOrderStatus } from '../../types/api';
 import styles from './OrderTimeline.module.css';
 
@@ -12,10 +13,7 @@ const STEPS: { status: ApiOrderStatus; label: string }[] = [
 export function OrderTimeline({ status }: { status: ApiOrderStatus }) {
   if (status === 'CANCELLED' || status === 'REFUNDED') {
     return (
-      <div
-        className={styles.terminalBanner}
-        style={{ background: 'var(--color-error-bg)', color: 'var(--color-error)' }}
-      >
+      <div className={styles.terminalBanner}>
         This order was {status === 'CANCELLED' ? 'cancelled' : 'refunded'}.
       </div>
     );
@@ -30,7 +28,7 @@ export function OrderTimeline({ status }: { status: ApiOrderStatus }) {
         return (
           <div key={step.status} className={`${styles.step} ${styles[state] ?? ''}`.trim()}>
             <span className={styles.line} aria-hidden="true" />
-            <div className={styles.dot}>{index < currentIndex ? '✓' : index + 1}</div>
+            <div className={styles.dot}>{index < currentIndex ? <Check size={14} strokeWidth={3} aria-label="Done" /> : index + 1}</div>
             <p className={styles.label}>{step.label}</p>
           </div>
         );

@@ -1,49 +1,78 @@
+@import '@fontsource/dela-gothic-one/400.css';
+@import '@fontsource/kalam/400.css';
+@import '@fontsource/kalam/700.css';
+@import '@fontsource-variable/figtree';
+
+/*
+ * Study zine: the site reads like a student's annotated magazine spread. Warm white
+ * paper, ink-black outlines, and three highlighters: pink is the loud primary, yellow
+ * marks and focuses, green confirms. Token names are shared by every module.
+ */
 :root {
-  /* Brand color — deep pine/teal, evokes clinical trust without the cliché of pure medical blue */
-  --color-primary-900: #0a3836;
-  --color-primary-700: #0e5c56;
-  --color-primary-600: #136f67;
-  --color-primary-500: #1b8278;
-  --color-primary-100: #e4efec;
-  --color-primary-50: #f1f7f5;
+  /* Highlighter pink: primary actions. 700 is for text; 500 is the fill (ink text on it). */
+  --color-primary-900: #121014;
+  --color-primary-700: #c4005f;
+  --color-primary-600: #e0006e;
+  --color-primary-500: #ff2d87;
+  --color-primary-100: #ffe0ee;
+  --color-primary-50: #fff1f7;
+  --color-pink-700: #c4005f;
+  --color-pink-100: #ffe0ee;
 
-  /* Accent — warm amber, used sparingly for calls to action and highlights */
-  --color-accent-700: #a46a1f;
-  --color-accent-600: #c6872c;
-  --color-accent-500: #d99a3c;
-  --color-accent-100: #faebd2;
+  /* Highlighter yellow: marks, focus, "you are here". Ink text on it. */
+  --color-accent-700: #6b5600;
+  --color-accent-600: #f5cf00;
+  --color-accent-500: #ffe23d;
+  --color-accent-100: #fff6c2;
 
-  /* Neutrals — warm paper tones rather than stark gray, for an editorial feel */
-  --color-ink-900: #15211e;
-  --color-ink-700: #35433f;
-  --color-ink-500: #5c6b66;
-  --color-ink-300: #93a39d;
+  /* Highlighter green: confirmation and stock */
+  --color-green-500: #3ee07a;
+  --color-green-100: #dcfbe6;
+
+  /* Ink and paper */
+  --color-ink-900: #121014;
+  --color-ink-700: #2e2a31;
+  --color-ink-500: #57515b;
+  --color-ink-300: #9a949e;
   --color-paper-0: #ffffff;
-  --color-paper-50: #fbf8f2;
-  --color-paper-100: #f4efe3;
-  --color-paper-200: #e9e1cf;
-  --color-border: #e1d9c6;
+  --color-paper-50: #fffdf7;
+  --color-paper-100: #f6f1e7;
+  --color-paper-200: #ebe4d6;
+  --color-border: #e2dac9;
+  --color-border-strong: #121014;
+  --line: 2px solid var(--color-ink-900);
 
   /* Semantic */
-  --color-success: #2f7d4f;
-  --color-success-bg: #e9f5ee;
-  --color-error: #b3432b;
-  --color-error-bg: #fbece7;
-  --color-focus-ring: #1b8278;
+  --color-success: #0d7a40;
+  --color-success-bg: #dcfbe6;
+  --color-error: #c21d1d;
+  --color-error-bg: #fde7e7;
+  --color-focus-ring: #121014;
 
-  /* Typography */
-  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Subject bands (see src/lib/subjects.ts). White text passes 4.5:1 on each. */
+  --sub-1: #2860e0;
+  --sub-2: #6b2ee6;
+  --sub-3: #c24f00;
+  --sub-4: #0a7f42;
+  --sub-5: #007a7a;
+  --sub-6: #c9262b;
+  --sub-7: #c4005f;
+  --sub-8: #5c5a00;
+
+  /* Typography: a poster face for headlines, an Indian handwriting face for small notes, a clean sans for reading */
+  --font-display: 'Dela Gothic One', 'Arial Black', system-ui, sans-serif;
+  --font-hand: 'Kalam', 'Comic Sans MS', cursive;
+  --font-body: 'Figtree Variable', 'Figtree', system-ui, sans-serif;
 
   --fs-xs: 0.8125rem;
   --fs-sm: 0.9375rem;
-  --fs-base: 1rem;
-  --fs-md: 1.125rem;
+  --fs-base: 1.0625rem;
+  --fs-md: 1.1875rem;
   --fs-lg: 1.375rem;
   --fs-xl: 1.75rem;
   --fs-2xl: 2.25rem;
-  --fs-3xl: 3rem;
-  --fs-4xl: 3.75rem;
+  --fs-3xl: 2.75rem;
+  --fs-4xl: 4rem;
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -57,28 +86,37 @@
   --space-9: 6rem;
   --space-10: 8rem;
 
+  /* Vertical rhythm between page sections, so every page breathes the same way */
+  --section-gap: clamp(3.5rem, 7vw, 5.5rem);
+
   /* Shape */
   --radius-sm: 8px;
   --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-lg: 18px;
   --radius-full: 999px;
 
-  /* Shadow — warm-tinted, soft, never pure black */
-  --shadow-sm: 0 1px 2px rgba(21, 33, 30, 0.06), 0 1px 1px rgba(21, 33, 30, 0.04);
-  --shadow-md: 0 8px 24px -8px rgba(21, 33, 30, 0.18);
-  --shadow-lg: 0 20px 48px -12px rgba(21, 33, 30, 0.22);
-  --shadow-focus: 0 0 0 3px rgba(27, 130, 120, 0.3);
+  /* Elevation is a printed lift: a short ink offset, like a sticker standing off the page */
+  --shadow-sm: 0 2px 0 var(--color-ink-900);
+  --shadow-md: 0 4px 0 var(--color-ink-900);
+  --shadow-lg: 0 6px 0 var(--color-ink-900);
+  --shadow-focus: 0 0 0 4px var(--color-accent-500);
 
-  /* Motion — subtle and quick, never showy */
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 450ms;
-  --duration-reveal: 650ms;
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 380ms;
+  --duration-reveal: 0ms;
 
-  --container-max: 1200px;
-  --header-height: 76px;
+  --container-max: 1280px;
+  /* Total height of the sticky header: one row on small screens, two on desktop */
+  --header-height: 66px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-height: 117px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -86,6 +124,5 @@
     --duration-fast: 0ms;
     --duration-base: 0ms;
     --duration-slow: 0ms;
-    --duration-reveal: 0ms;
   }
 }

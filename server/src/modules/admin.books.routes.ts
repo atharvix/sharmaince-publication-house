@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { coverImageUpload, detectImageExtension } from '../middleware/upload.js';
 import { storage } from '../lib/storage.js';
+import { isCoverReadingEnabled, prepareCoverImage, readCoverDetails } from '../lib/coverReader.js';
 import { rupeesToMinor } from '../lib/money.js';
 
 export const adminBooksRouter = Router();
@@ -107,6 +108,49 @@ adminBooksRouter.delete(
 
 // ---------- Cover image ----------
 
+/**
+ * Reads a cover photo for the "add book" form: returns the cleaned-up front cover and,
+ * when a Claude API key is configured, the details printed on it. Nothing is saved here;
+ * the form uploads the returned cover once the book is created.
+ */
+adminBooksRouter.post(
+  '/read-cover',
+  coverImageUpload.single('cover'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) throw AppError.badRequest('No image file was uploaded (field name must be "cover")');
+    detectImageExtension(req.file.buffer);
+
+    const [categories, authors] = await Promise.all([
+      prisma.category.findMany({ select: { id: true, slug: true, name: true } }),
+      prisma.author.findMany({ select: { id: true, name: true } }),
+    ]);
+    const details = await readCoverDetails(req.file.buffer, categories);
+    const cover = await prepareCoverImage(req.file.buffer, details?.frontCover);
+
+    const normalise = (name: string) => name.toLowerCase().replace(/\b(dr|prof|professor|mr|mrs|ms)\.?\s+/g, '').replace(/[^a-z]/g, '');
+    const printedAuthors = (details?.authors ?? []).map((printed) => ({
+      ...printed,
+      existingId: authors.find((a) => normalise(a.name) === normalise(printed.name))?.id ?? null,
+    }));
+
+    res.json({
+      cover: `data:image/jpeg;base64,${cover.toString('base64')}`,
+      readingEnabled: isCoverReadingEnabled,
+      details: details && {
+        title: details.title,
+        subtitle: details.subtitle,
+        slug: slugify(details.title),
+        isbn: details.isbn,
+        edition: details.edition,
+        description: details.description,
+        highlights: details.highlights.slice(0, 5),
+        categoryId: categories.find((c) => c.slug === details.subjectSlug)?.id ?? null,
+        authors: printedAuthors,
+      },
+    });
+  }),
+);
+
 adminBooksRouter.post(
   '/:id/cover',
   coverImageUpload.single('cover'),
@@ -115,7 +159,8 @@ adminBooksRouter.post(
     if (!existing) throw AppError.notFound('Book not found');
     if (!req.file) throw AppError.badRequest('No image file was uploaded (field name must be "cover")');
 
-    const url = await storage.save(req.file.buffer, detectImageExtension(req.file.buffer), 'covers');
+    detectImageExtension(req.file.buffer);
+    const url = await storage.save(await prepareCoverImage(req.file.buffer), '.jpg', 'covers');
 
     const book = await prisma.book.update({
       where: { id: req.params.id },
@@ -247,4 +292,13 @@ function serializeAdminBook(book: {
     category: book.category,
     authors: book.authors.map((a) => a.author),
   };
+}
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 160);
 }

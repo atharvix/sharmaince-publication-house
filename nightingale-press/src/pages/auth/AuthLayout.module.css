@@ -16,15 +16,6 @@
   box-shadow: var(--shadow-md);
 }
 
-.eyebrow {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-accent-700);
-  margin-bottom: var(--space-3);
-}
-
 .title {
   font-size: var(--fs-xl);
 }

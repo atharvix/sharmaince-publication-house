@@ -33,7 +33,7 @@ export default function Register() {
   }
 
   return (
-    <AuthLayout eyebrow="Join Nightingale" title="Create your account" subtitle="Save your addresses, track orders and build a wishlist.">
+    <AuthLayout title="Create your account" subtitle="Save your addresses, track orders and build a wishlist.">
       <form className={styles.form} onSubmit={handleSubmit}>
         <InputField id="register-name" name="name" label="Full name" required placeholder="Your name" />
         <InputField id="register-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />

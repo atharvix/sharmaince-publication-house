@@ -1,177 +1,152 @@
 import { Link } from 'react-router-dom';
-import { fetchBooks, fetchCategories, fetchAuthors } from '../lib/catalogue';
+import { ArrowRight } from 'lucide-react';
+import { fetchBooks, fetchCategories } from '../lib/catalogue';
 import { useFetch } from '../hooks/useFetch';
-import { Button } from '../components/ui/Button';
+import { formatRupees } from '../lib/format';
+import { subjectColor } from '../lib/subjects';
+import type { Book } from '../types';
 import { BookCard } from '../components/ui/BookCard';
 import { BookCover } from '../components/ui/BookCover';
-import { SectionHeading } from '../components/ui/SectionHeading';
-import { StatStrip } from '../components/ui/StatStrip';
-import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import styles from './Home.module.css';
 
-const VALUE_PROPS = [
-  {
-    icon: '◎',
-    title: 'Curriculum-aligned content',
-    body: 'Every title is developed alongside practising faculty and mapped to current nursing and allied-health syllabi.',
-  },
-  {
-    icon: '✓',
-    title: 'Rigorously reviewed',
-    body: 'Manuscripts pass through subject-matter and clinical review before a single page goes to print.',
-  },
-  {
-    icon: '→',
-    title: 'Reliable nationwide delivery',
-    body: 'From single copies to full-batch institutional orders, dispatch and tracking are built into every order.',
-  },
+const ROUTES = [
+  { who: "I'm studying", where: 'Find my textbook', to: '/books' },
+  { who: 'I teach', where: 'Get an inspection copy', to: '/contact?reason=inspection' },
+  { who: 'I order for a college', where: 'Get a bulk quote', to: '/bulk-orders' },
 ];
+
+function Go() {
+  return (
+    <span className={styles.go} aria-hidden="true">
+      <ArrowRight size={20} strokeWidth={2.75} />
+    </span>
+  );
+}
+
+/** What gets written next to each cover in the pile: always real catalogue data. */
+function annotation(book: Book, index: number) {
+  if (index === 0) return `${formatRupees(book.price)} · ${book.pages} pp`;
+  if (index === 2) return `${book.edition.replace(/ Edition$/, ' ed.')}, ${book.pages} pages`;
+  return formatRupees(book.price);
+}
+
+function Shelf({ title, highlight, books, total }: { title: string; highlight: string; books: Book[]; total?: number }) {
+  return (
+    <section className={`container ${styles.shelf}`}>
+      <div className={styles.shelfHead}>
+        <h2 className={styles.shelfTitle}>
+          {title} <span className={styles.ink}>{highlight}</span>
+        </h2>
+        <Link to="/books" className={styles.more}>
+          {total ? `All ${total} titles` : 'All titles'}
+          <ArrowRight size={16} strokeWidth={2.5} aria-hidden="true" />
+        </Link>
+      </div>
+      <div className={styles.books}>
+        {books.map((book) => (
+          <BookCard key={book.slug} book={book} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const booksState = useFetch(() => fetchBooks({ pageSize: 48, sort: 'relevance' }), []);
   const categoriesState = useFetch(() => fetchCategories(), []);
-  const authorsState = useFetch(() => fetchAuthors(), []);
 
-  const allBooks = booksState.data?.items ?? [];
-  const statsReady = booksState.data && categoriesState.data && authorsState.data;
-  const featuredBooks = allBooks.filter((book) => book.featured);
-  const stackBooks = featuredBooks.slice(0, 3);
+  const books = booksState.data?.items ?? [];
+  const total = booksState.data?.total;
+  const newEditions = books.filter((book) => book.newRelease);
+  const featured = books.filter((book) => book.featured);
+  // The pile leads with new editions, then featured titles, then the rest.
+  const pile = [...new Set([...newEditions, ...featured, ...books])].slice(0, 5);
+  const firstNew = pile.findIndex((b) => b.newRelease);
+  const formats = [...new Set(books.map((book) => book.format.toLowerCase()))];
 
   return (
     <>
-      <section className={styles.hero}>
-        <div className={`container ${styles.heroGrid}`}>
-          <Reveal>
-            <span className={styles.eyebrow}>Nursing &amp; Allied-Health Publishing</span>
-            <h1 className={styles.heroTitle}>Textbooks built for the realities of clinical practice.</h1>
-            <p className={styles.heroSubtitle}>
-              Nightingale Academic Press publishes curriculum-aligned nursing, medical and
-              allied-health titles — written with faculty, reviewed by clinicians, and trusted in
-              classrooms and wards across the country.
+      <section className={`container ${styles.spread}`}>
+        <div className={styles.intro}>
+          <h1 className={styles.title}>
+            Publishing ideas. <em>Connecting readers.</em>
+          </h1>
+          {booksState.data && categoriesState.data && (
+            <p className={styles.lede}>
+              {total} titles across {categoriesState.data.length} subjects
+              {formats.length > 0 && <>, in {new Intl.ListFormat('en', { type: 'conjunction' }).format(formats)}</>}. Every one shows its{' '}
+              <span className="highlight">edition, pages and price</span> up front.
             </p>
-            <div className={styles.heroActions}>
-              <Button to="/books" size="lg" variant="primary">
-                Explore Books
-              </Button>
-              <Button to="/authors" size="lg" variant="outline">
-                Submit a Manuscript
-              </Button>
-            </div>
-          </Reveal>
+          )}
 
-          <Reveal delay={120}>
-            <div className={styles.heroVisual} aria-hidden="true">
-              {stackBooks.map((book) => (
-                <div className={styles.stackItem} key={book.slug}>
-                  <BookCover book={book} />
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {statsReady && (
-        <div className="container">
-          <Reveal>
-            <StatStrip
-              stats={[
-                { value: String(booksState.data!.total), label: 'Published titles' },
-                { value: String(categoriesState.data!.length), label: 'Subject areas' },
-                { value: String(authorsState.data!.length), label: 'Contributing authors' },
-              ]}
-            />
-          </Reveal>
-        </div>
-      )}
-
-      <section className={`container ${styles.section}`}>
-        <Reveal>
-          <SectionHeading eyebrow="Browse by subject" title="Find the right title for every stage of training" />
-        </Reveal>
-        <div style={{ height: 'var(--space-7)' }} />
-        {categoriesState.loading && <LoadingBlock label="Loading subjects…" />}
-        {categoriesState.error && <ErrorBlock message={categoriesState.error} onRetry={categoriesState.reload} />}
-        {categoriesState.data && (
-          <div className={styles.categoryGrid}>
-            {categoriesState.data.map((category, index) => (
-              <Reveal key={category.slug} delay={index * 60}>
-                <Link to={`/books?category=${encodeURIComponent(category.slug)}`} className={styles.categoryCard}>
-                  <span className={styles.categoryDot} aria-hidden="true" />
-                  <span className={styles.categoryName}>{category.name}</span>
-                  <span className={styles.categoryCount}>{category.bookCount ?? 0} titles</span>
-                </Link>
-              </Reveal>
+          <nav className={styles.routes} aria-label="Where are you headed?">
+            {ROUTES.map((route) => (
+              <Link key={route.to} to={route.to} className={styles.route}>
+                <span>
+                  <small className="hand">{route.who}</small>
+                  {route.where}
+                </span>
+                <Go />
+              </Link>
             ))}
-          </div>
-        )}
-      </section>
-
-      <section className={`container ${styles.section}`}>
-        <div className={styles.sectionHeadRow}>
-          <Reveal>
-            <SectionHeading eyebrow="Featured" title="Widely adopted this semester" />
-          </Reveal>
-          <Reveal delay={80}>
-            <Button to="/books" variant="ghost">
-              View full catalogue →
-            </Button>
-          </Reveal>
+          </nav>
         </div>
-        {booksState.loading && <LoadingBlock label="Loading featured titles…" />}
-        {booksState.error && <ErrorBlock message={booksState.error} onRetry={booksState.reload} />}
-        {booksState.data && (
-          <div className={styles.bookGrid}>
-            {featuredBooks.map((book, index) => (
-              <Reveal key={book.slug} delay={index * 70}>
-                <BookCard book={book} />
-              </Reveal>
-            ))}
-          </div>
-        )}
-      </section>
 
-      <section className={`container ${styles.sectionTight}`}>
-        <Reveal>
-          <SectionHeading
-            center
-            eyebrow="Why Nightingale"
-            title="Built with educators, not just for them"
-            subtitle="We work closely with teaching faculty at every stage — from planning a table of contents to classroom feedback after adoption."
-          />
-        </Reveal>
-        <div style={{ height: 'var(--space-7)' }} />
-        <div className={styles.valueGrid}>
-          {VALUE_PROPS.map((item, index) => (
-            <Reveal key={item.title} delay={index * 80} className={styles.valueCard}>
-              <div className={styles.valueIcon} aria-hidden="true">
-                {item.icon}
-              </div>
-              <h3 className={styles.valueTitle}>{item.title}</h3>
-              <p className={styles.valueBody}>{item.body}</p>
-            </Reveal>
+        <div className={styles.pile} aria-label="New and featured titles">
+          {booksState.loading && <LoadingBlock label="Loading titles…" />}
+          {pile.map((book, index) => (
+            <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatRupees(book.price)}`}>
+              <BookCover book={book} />
+              <span className={`${styles.callout} ${styles[`callout${index + 1}`]} hand`} aria-hidden="true">
+                {annotation(book, index)}
+              </span>
+              {index === firstNew && (
+                <span className={styles.burst} aria-hidden="true">
+                  <span>
+                    NEW
+                    <br />
+                    ED.
+                  </span>
+                </span>
+              )}
+            </Link>
           ))}
         </div>
       </section>
 
-      <section className={`container ${styles.section}`}>
-        <Reveal>
-          <div className={styles.ctaBand}>
-            <div>
-              <h2 className={styles.ctaBandTitle}>Ordering for a college, library or bookstore?</h2>
-              <p className={styles.ctaBandBody}>
-                Request institutional pricing, consolidated invoicing and coordinated delivery for
-                bulk orders of any size.
-              </p>
-            </div>
-            <div className={styles.ctaBandActions}>
-              <Button to="/bulk-orders" size="lg" variant="accent">
-                Start a Bulk Order
-              </Button>
-            </div>
-          </div>
-        </Reveal>
+      <section className={`container ${styles.subjects}`}>
+        <h2 className={styles.sticker}>Pick a subject</h2>
+        {categoriesState.error && <ErrorBlock message={categoriesState.error} onRetry={categoriesState.reload} />}
+        <ul className={styles.chips}>
+          {categoriesState.data?.map((category) => (
+            <li key={category.slug}>
+              <Link to={`/books?category=${encodeURIComponent(category.slug)}`} className={styles.chip}>
+                <span className={styles.dot} style={{ background: subjectColor(category.slug) }} aria-hidden="true" />
+                {category.name}
+                <span className={`${styles.chipCount} hand`}>{category.bookCount ?? 0}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {booksState.error && (
+        <div className="container">
+          <ErrorBlock message={booksState.error} onRetry={booksState.reload} />
+        </div>
+      )}
+      {newEditions.length > 0 && <Shelf title="Fresh off" highlight="the press" books={newEditions.slice(0, 4)} total={total} />}
+      {featured.length > 0 && <Shelf title="Featured" highlight="titles" books={featured.slice(0, 8)} total={total} />}
+
+      <section className={`container ${styles.proposalWrap}`}>
+        <Link to="/authors#submit-manuscript" className={styles.proposal}>
+          <span className={styles.proposalText}>
+            <strong>Writing a textbook?</strong>
+            <span>Send a proposal to our editorial team.</span>
+          </span>
+          <Go />
+        </Link>
       </section>
     </>
   );

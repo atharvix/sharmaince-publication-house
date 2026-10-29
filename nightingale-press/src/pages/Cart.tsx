@@ -89,7 +89,7 @@ export default function Cart() {
           </div>
         ) : (
           <div className={styles.emptyState} style={{ marginBlock: 'var(--space-8)' }}>
-            <p className={styles.emptyIcon}>🛒</p>
+            <p className={`${styles.emptyIcon} hand`}>nothing here yet</p>
             <p style={{ marginBottom: 'var(--space-5)' }}>Your cart is empty.</p>
             <Button to="/books" variant="primary" size="md">
               Browse Books

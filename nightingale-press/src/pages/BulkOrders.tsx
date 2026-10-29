@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { CalendarClock, ReceiptText, Tag, UserRound } from 'lucide-react';
 import { PageHero } from '../components/ui/PageHero';
 import { Reveal } from '../components/ui/Reveal';
 import { Button } from '../components/ui/Button';
@@ -8,10 +9,10 @@ import { api, ApiError } from '../lib/api';
 import styles from './Contact.module.css';
 
 const BENEFITS = [
-  { icon: '🏷', label: 'Institutional pricing', value: 'Tiered discounts based on order volume, confirmed with a formal quotation.' },
-  { icon: '🧾', label: 'Consolidated invoicing', value: 'One invoice per order, suitable for purchase-order workflows.' },
-  { icon: '🚚', label: 'Coordinated delivery', value: 'Delivery scheduled to match your academic calendar.' },
-  { icon: '🤝', label: 'A dedicated contact', value: 'One point of contact from quotation through delivery.' },
+  { icon: Tag, label: 'Institutional pricing', value: 'Tiered discounts based on order volume, confirmed with a formal quotation.' },
+  { icon: ReceiptText, label: 'Consolidated invoicing', value: 'One invoice per order, suitable for purchase-order workflows.' },
+  { icon: CalendarClock, label: 'Coordinated delivery', value: 'Delivery scheduled to match your academic calendar.' },
+  { icon: UserRound, label: 'A dedicated contact', value: 'One point of contact from quotation through delivery.' },
 ];
 
 const ORG_TYPE_LABEL: Record<string, string> = {
@@ -63,10 +64,10 @@ export default function BulkOrders() {
         <div className={styles.layout}>
           <Reveal>
             <div className={styles.infoList}>
-              {BENEFITS.map((item) => (
+              {BENEFITS.map(({ icon: Icon, ...item }) => (
                 <div className={styles.infoItem} key={item.label}>
                   <div className={styles.infoIcon} aria-hidden="true">
-                    {item.icon}
+                    <Icon size={20} strokeWidth={1.75} />
                   </div>
                   <div>
                     <p className={styles.infoLabel}>{item.label}</p>

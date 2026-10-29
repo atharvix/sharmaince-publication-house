@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { ArrowRight, GraduationCap } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchBookBySlug } from '../lib/catalogue';
 import { useFetch } from '../hooks/useFetch';
 import type { Book } from '../types';
-import { useCart, snapshotFromBook } from '../context/CartContext';
+import type { ApiWishlistItem } from '../types/api';
+import { MAX_QUANTITY_PER_TITLE, useCart, snapshotFromBook } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../lib/api';
+import { subjectColor } from '../lib/subjects';
 import { BookCover } from '../components/ui/BookCover';
 import { BookCard } from '../components/ui/BookCard';
 import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { Button } from '../components/ui/Button';
-import { Reveal } from '../components/ui/Reveal';
 import { LoadingBlock, ErrorBlock } from '../components/ui/RequestState';
 import styles from './BookDetail.module.css';
 import { formatRupees } from '../lib/format';
@@ -30,11 +32,35 @@ export default function BookDetail() {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [wishlistError, setWishlistError] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useFetch(() => {
     if (!slug) return Promise.reject(new Error('Missing slug'));
     return fetchBookBySlug(slug);
   }, [slug]);
+
+  const bookId = data?.book.id;
+
+  // Reflect whether this title is already saved, rather than always starting unsaved.
+  useEffect(() => {
+    if (!user || !bookId) return;
+    let cancelled = false;
+    api
+      .get<{ items: ApiWishlistItem[] }>('/me/wishlist')
+      .then((res) => {
+        if (!cancelled) setWishlisted(res.items.some((item) => item.bookId === bookId));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, bookId]);
+
+  useEffect(() => {
+    if (!added) return;
+    const timer = window.setTimeout(() => setAdded(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [added]);
 
   if (loading) return <LoadingBlock label="Loading book…" />;
   if (error || !data) {
@@ -51,140 +77,142 @@ export default function BookDetail() {
   function handleAddToCart() {
     addItem(snapshotFromBook(book), quantity);
     setAdded(true);
-    window.setTimeout(() => setAdded(false), 2400);
   }
 
   async function handleWishlist() {
     if (!user) {
-      navigate(`/login?redirect=/books/${slug}`);
+      navigate(`/login?redirect=${encodeURIComponent(`/books/${book.slug}`)}`);
       return;
     }
     setWishlistBusy(true);
+    setWishlistError(null);
     try {
-      if (wishlisted) {
-        await api.delete(`/me/wishlist/${book.id}`);
-        setWishlisted(false);
-      } else {
-        await api.post('/me/wishlist', { bookId: book.id });
-        setWishlisted(true);
-      }
+      if (wishlisted) await api.delete(`/me/wishlist/${book.id}`);
+      else await api.post('/me/wishlist', { bookId: book.id });
+      setWishlisted(!wishlisted);
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
+      setWishlistError(err instanceof ApiError ? err.message : 'Could not update your saved books.');
     } finally {
       setWishlistBusy(false);
     }
   }
 
+  const details: [string, string][] = [
+    ['Edition', book.edition],
+    ['Format', book.format],
+    ['Pages', String(book.pages)],
+    ['ISBN', book.isbn],
+  ];
+
   return (
     <div className="container">
-      <div style={{ paddingTop: 'var(--space-5)' }}>
-        <Breadcrumbs trail={[{ label: 'Books', to: '/books' }, { label: book.title }]} />
+      <div className={styles.crumbs}>
+        <Breadcrumbs trail={[{ label: 'Books', to: '/books' }, { label: book.category.name, to: `/books?category=${book.category.slug}` }, { label: book.title }]} />
       </div>
 
       <div className={styles.layout}>
-        <Reveal as="div" className={styles.coverCol}>
-          <div className={styles.coverShadow}>
+        <div className={styles.coverCol}>
+          <div className={styles.coverFrame}>
             <BookCover book={book} />
-          </div>
-        </Reveal>
-
-        <Reveal delay={90}>
-          <p className={styles.category}>{book.category.name}</p>
-          <h1 className={styles.title}>{book.title}</h1>
-          {book.subtitle && <p className={styles.subtitle}>{book.subtitle}</p>}
-          <p className={styles.author}>by {book.author}</p>
-
-          <div className={styles.metaRow}>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Edition</span>
-              <span className={styles.metaValue}>{book.edition}</span>
-            </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Format</span>
-              <span className={styles.metaValue}>{book.format}</span>
-            </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Pages</span>
-              <span className={styles.metaValue}>{book.pages}</span>
-            </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>ISBN</span>
-              <span className={styles.metaValue}>{book.isbn}</span>
-            </div>
-          </div>
-
-          <div className={styles.purchaseRow}>
-            <span className={styles.price}>{formatRupees(book.price)}</span>
-            <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>
-              {book.availability}
-            </span>
-          </div>
-
-          <div className={styles.actionsRow}>
-            <div className={styles.stepper}>
-              <button
-                type="button"
-                className={styles.stepperButton}
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                disabled={!canOrder || quantity <= 1}
-                aria-label="Decrease quantity"
-              >
-                −
-              </button>
-              <span className={styles.stepperValue} aria-live="polite">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                className={styles.stepperButton}
-                onClick={() => setQuantity((q) => Math.min(20, q + 1))}
-                disabled={!canOrder}
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
-            </div>
-            <Button size="md" variant="primary" disabled={!canOrder} onClick={handleAddToCart}>
-              {canOrder ? 'Add to Cart' : 'Out of Stock'}
-            </Button>
-            <Button size="md" variant="outline" disabled={wishlistBusy} onClick={handleWishlist} type="button">
-              {wishlisted ? '♥ Saved' : '♡ Save for later'}
-            </Button>
-            {added && (
-              <span className={styles.confirmation}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Added to cart
+            {book.newRelease && (
+              <span className={styles.sticker} aria-label="New edition">
+                NEW
+                <br />
+                ED.
               </span>
             )}
           </div>
+        </div>
 
-          <div className={styles.body}>
-            <h2 className={styles.sectionTitle}>About this book</h2>
-            <p>{book.description}</p>
-            <ul className={styles.highlightList}>
-              {book.highlights.map((highlight) => (
-                <li className={styles.highlightItem} key={highlight}>
-                  <span className={styles.highlightDot} aria-hidden="true" />
-                  <span>{highlight}</span>
-                </li>
-              ))}
-            </ul>
+        <div>
+          <Link to={`/books?category=${book.category.slug}`} className={styles.subject}>
+            <span className={styles.dot} style={{ background: subjectColor(book.category.slug) }} aria-hidden="true" />
+            {book.category.name}
+          </Link>
+          <h1 className={styles.title}>{book.title}</h1>
+          {book.subtitle && <p className={styles.subtitle}>{book.subtitle}</p>}
+          <p className={styles.author}>
+            {book.author}
+          </p>
+
+          <dl className={styles.details}>
+            {details.map(([label, value]) => (
+              <div key={label}>
+                <dt className="hand">{label}</dt>
+                <dd className="tabular">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className={styles.buy}>
+            <div className={styles.priceRow}>
+              <span className={`${styles.price} hand`}>{formatRupees(book.price)}</span>
+              <span className={`${styles.availability} ${AVAILABILITY_CLASS[book.availability]}`}>{book.availability}</span>
+            </div>
+
+            <div className={styles.actions}>
+              <div className={styles.stepper} role="group" aria-label="Quantity">
+                <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={!canOrder || quantity <= 1} aria-label="Decrease quantity">
+                  −
+                </button>
+                <span className="tabular" aria-live="polite">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY_PER_TITLE, q + 1))}
+                  disabled={!canOrder || quantity >= MAX_QUANTITY_PER_TITLE}
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+              <Button size="md" variant="primary" disabled={!canOrder} onClick={handleAddToCart}>
+                {canOrder ? 'Add to cart' : 'Out of stock'}
+              </Button>
+              <Button size="md" variant="outline" disabled={wishlistBusy} onClick={handleWishlist}>
+                {wishlisted ? 'Saved' : 'Save for later'}
+              </Button>
+            </div>
+
+            <div className={styles.feedback} role="status">
+              {added && (
+                <p className={styles.added}>
+                  Added {quantity > 1 ? `${quantity} copies` : 'to your cart'}. <Link to="/cart">View cart</Link>
+                </p>
+              )}
+              {wishlistError && <p className={styles.errorText}>{wishlistError}</p>}
+            </div>
           </div>
-        </Reveal>
+
+          <Link to={`/contact?reason=inspection&title=${encodeURIComponent(book.title)}`} className={styles.inspection}>
+            <GraduationCap className={styles.inspectionIcon} size={22} strokeWidth={1.75} aria-hidden="true" />
+            <span>
+              <strong>Teaching this subject?</strong> Request an inspection copy for your course.
+            </span>
+            <ArrowRight size={20} strokeWidth={2} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
 
+      <section className={styles.about}>
+        <h2 className={styles.sectionTitle}>What's inside</h2>
+        <p className={styles.description}>{book.description}</p>
+        {book.highlights.length > 0 && (
+          <ul className={styles.highlights}>
+            {book.highlights.map((highlight) => (
+              <li key={highlight}>{highlight}</li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {related.length > 0 && (
-        <section className={styles.relatedSection}>
-          <Reveal>
-            <h2 className={styles.sectionTitle}>More in {book.category.name}</h2>
-          </Reveal>
-          <div className={styles.bookGrid}>
-            {related.map((relatedBook, index) => (
-              <Reveal key={relatedBook.slug} delay={index * 70}>
-                <BookCard book={relatedBook} />
-              </Reveal>
+        <section className={styles.related}>
+          <h2 className={styles.sectionTitle}>More in {book.category.name}</h2>
+          <div className={styles.relatedGrid}>
+            {related.map((relatedBook) => (
+              <BookCard key={relatedBook.slug} book={relatedBook} />
             ))}
           </div>
         </section>

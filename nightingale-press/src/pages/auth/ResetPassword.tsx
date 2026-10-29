@@ -34,7 +34,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthLayout eyebrow="Password reset" title="Choose a new password">
+    <AuthLayout title="Choose a new password">
       {!token ? (
         <p className={styles.errorBanner}>
           This reset link is invalid or incomplete. <Link to="/forgot-password">Request a new one</Link>.

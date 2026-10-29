@@ -1,23 +1,23 @@
-import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { useScrolled } from '../../hooks/useScrolled';
+import { useEffect, useState, type FormEvent } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, Search, ShoppingBag, User, X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../ui/Button';
 import styles from './Header.module.css';
 
 const NAV_LINKS = [
   { to: '/books', label: 'Books' },
   { to: '/authors', label: 'Authors' },
-  { to: '/bulk-orders', label: 'Bulk Orders' },
+  { to: '/bulk-orders', label: 'Bulk orders' },
   { to: '/about', label: 'About' },
-  { to: '/support', label: 'Support' },
+  { to: '/support', label: 'Help' },
 ];
 
 export function Header() {
-  const scrolled = useScrolled();
   const { itemCount } = useCart();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -27,128 +27,84 @@ export function Header() {
     };
   }, [menuOpen]);
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.navLink} ${isActive ? styles.active : ''}`.trim();
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const q = String(new FormData(event.currentTarget).get('q') ?? '').trim();
+    setMenuOpen(false);
+    navigate(q ? `/books?q=${encodeURIComponent(q)}` : '/books');
+  }
+
+  const accountPath = user ? (user.role === 'CUSTOMER' ? '/account' : '/admin') : '/login';
+  const accountLabel = user ? (user.role === 'CUSTOMER' ? 'Account' : 'Workspace') : 'Log in';
+  const linkClass = ({ isActive }: { isActive: boolean }) => `${styles.navLink} ${isActive ? styles.active : ''}`.trim();
+  const currentQuery = new URLSearchParams(location.search).get('q') ?? '';
 
   return (
-    <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`.trim()}>
-      <div className={`container ${styles.bar}`}>
-        <NavLink to="/" className={styles.brand} onClick={() => setMenuOpen(false)}>
-          <span className={styles.mark} aria-hidden="true">
-            N
-          </span>
-          <span className={styles.brandText}>
-            Nightingale
-            <span className={styles.brandSub}>Academic Press</span>
-          </span>
+    <header className={styles.header}>
+      <div className={`container ${styles.top}`}>
+        <NavLink to="/" className={styles.brand} aria-label="Sharmiance Publication House, home">
+          Sharmiance <span className={styles.brandSub}>Publication House</span>
         </NavLink>
 
-        <nav className={styles.nav} aria-label="Primary">
+        <form className={styles.search} role="search" onSubmit={handleSearch}>
+          <Search size={18} strokeWidth={2} aria-hidden="true" />
+          <input name="q" type="search" placeholder="Search by title, author or ISBN" aria-label="Search books" key={location.search} defaultValue={currentQuery} />
+        </form>
+
+        <div className={styles.actions}>
+          <NavLink to={accountPath} className={styles.action}>
+            <User size={20} strokeWidth={1.9} aria-hidden="true" />
+            <span className={styles.actionLabel}>{accountLabel}</span>
+          </NavLink>
+          <NavLink to="/cart" className={`${styles.action} ${styles.cart}`} aria-label={`Cart, ${itemCount} item${itemCount === 1 ? '' : 's'}`}>
+            <span className={styles.bag}>
+              <ShoppingBag size={20} strokeWidth={1.9} aria-hidden="true" />
+              {itemCount > 0 && (
+                <span className={`${styles.count} tabular`} aria-hidden="true">
+                  {itemCount}
+                </span>
+              )}
+            </span>
+            <span className={styles.actionLabel} aria-hidden="true">
+              Cart
+            </span>
+          </NavLink>
+          <button
+            type="button"
+            className={styles.menuToggle}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X size={22} strokeWidth={2} aria-hidden="true" /> : <Menu size={22} strokeWidth={2} aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+
+      <nav className={styles.navBar} aria-label="Primary">
+        <div className={`container ${styles.navInner}`}>
           {NAV_LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} className={linkClass}>
               {link.label}
             </NavLink>
           ))}
-        </nav>
-
-        <div className={styles.actions}>
-          <NavLink to="/cart" className={styles.iconButton} aria-label={`Cart, ${itemCount} item${itemCount === 1 ? '' : 's'}`}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M6 7h14l-1.5 9.5a2 2 0 0 1-2 1.7H9a2 2 0 0 1-2-1.7L5.2 4.4A1 1 0 0 0 4.2 3.6H2"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="10" cy="20.5" r="1.2" fill="currentColor" />
-              <circle cx="17" cy="20.5" r="1.2" fill="currentColor" />
-            </svg>
-            {itemCount > 0 && (
-              <span key={itemCount} className={styles.cartBadge}>
-                {itemCount}
-              </span>
-            )}
+          <NavLink to="/contact" className={`${styles.navLink} ${styles.navEnd}`}>
+            Contact
           </NavLink>
-          {user ? (
-            <NavLink to={user.role === 'CUSTOMER' ? '/account' : '/admin'} className={styles.iconButton} aria-label="Your account">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </NavLink>
-          ) : (
-            <Button to="/login" size="sm" variant="outline">
-              Log In
-            </Button>
-          )}
-          <Button to="/books" size="sm" variant="primary">
-            Explore Books
-          </Button>
-          <button
-            type="button"
-            className={`${styles.iconButton} ${styles.menuToggle}`}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              {menuOpen ? (
-                <path
-                  d="M6 6l12 12M18 6L6 18"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              ) : (
-                <path
-                  d="M4 7h16M4 12h16M4 17h16"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              )}
-            </svg>
-          </button>
         </div>
-      </div>
+      </nav>
 
-      <div
-        className={`${styles.mobilePanel} ${menuOpen ? styles.open : ''}`.trim()}
-        aria-hidden={!menuOpen}
-      >
-        {NAV_LINKS.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={styles.mobileLink}
-            onClick={() => setMenuOpen(false)}
-            tabIndex={menuOpen ? 0 : -1}
-          >
+      <div id="mobile-menu" className={styles.mobilePanel} hidden={!menuOpen}>
+        <form className={`${styles.search} ${styles.mobileSearch}`} role="search" onSubmit={handleSearch}>
+          <Search size={18} strokeWidth={2} aria-hidden="true" />
+          <input name="q" type="search" placeholder="Search by title, author or ISBN" aria-label="Search books" />
+        </form>
+        {[...NAV_LINKS, { to: '/contact', label: 'Contact' }, { to: accountPath, label: accountLabel }].map((link) => (
+          <NavLink key={link.to + link.label} to={link.to} className={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             {link.label}
           </NavLink>
         ))}
-        <NavLink
-          to="/contact"
-          className={styles.mobileLink}
-          onClick={() => setMenuOpen(false)}
-          tabIndex={menuOpen ? 0 : -1}
-        >
-          Contact
-        </NavLink>
-        <NavLink
-          to={user ? (user.role === 'CUSTOMER' ? '/account' : '/admin') : '/login'}
-          className={styles.mobileLink}
-          onClick={() => setMenuOpen(false)}
-          tabIndex={menuOpen ? 0 : -1}
-        >
-          {user ? 'Your Account' : 'Log In'}
-        </NavLink>
-        <div className={styles.mobileCta}>
-          <Button to="/books" size="lg" variant="primary" onClick={() => setMenuOpen(false)}>
-            Explore Books
-          </Button>
-        </div>
       </div>
     </header>
   );

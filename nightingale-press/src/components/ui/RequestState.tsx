@@ -1,3 +1,4 @@
+import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 import styles from './RequestState.module.css';
 
@@ -13,9 +14,7 @@ export function LoadingBlock({ label = 'Loading…' }: { label?: string }) {
 export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className={styles.errorWrap} role="alert">
-      <p className={styles.errorIcon} aria-hidden="true">
-        ⚠
-      </p>
+      <AlertCircle className={styles.errorIcon} size={28} strokeWidth={1.75} aria-hidden="true" />
       <p>{message}</p>
       {onRetry && (
         <div style={{ marginTop: 'var(--space-4)' }}>
