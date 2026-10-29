@@ -101,7 +101,7 @@ export default function Home() {
           </nav>
         </div>
 
-        <div className={styles.pile} aria-label="New and featured titles">
+        <div className={styles.pile} data-count={pile.length} aria-label="New and featured titles">
           {booksState.loading && <LoadingBlock label="Loading titles…" />}
           {pile.map((book, index) => (
             <Link key={book.slug} to={`/books/${book.slug}`} className={`${styles.cut} ${styles[`cut${index + 1}`]}`} aria-label={`${book.title}, ${formatBookPrice(book.price)}`}>

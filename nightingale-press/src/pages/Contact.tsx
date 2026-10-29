@@ -15,7 +15,7 @@ const INFO = [
   { icon: Phone, label: 'Phone', value: SITE_CONTACT.phone },
   { icon: MapPin, label: 'Editorial office', value: SITE_CONTACT.office },
   { icon: Clock, label: 'Hours', value: SITE_CONTACT.hours },
-];
+].filter((item): item is typeof item & { value: string } => item.value !== null);
 
 const REASONS = ['order', 'catalogue', 'inspection', 'partnership', 'other'];
 
@@ -61,6 +61,9 @@ export default function Contact() {
         <div className={styles.layout}>
           <Reveal>
             <div className={styles.infoList}>
+              {INFO.length === 0 && (
+                <p className={styles.infoValue}>Send us a message with the form and our team will reply by email.</p>
+              )}
               {INFO.map(({ icon: Icon, ...item }) => (
                 <div className={styles.infoItem} key={item.label}>
                   <div className={styles.infoIcon} aria-hidden="true">

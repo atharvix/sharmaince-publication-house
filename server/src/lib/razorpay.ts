@@ -1,14 +1,16 @@
 import crypto from 'node:crypto';
 import Razorpay from 'razorpay';
 import { env, isProduction, isRazorpayConfigured } from '../env.js';
+import { AppError } from './errors.js';
 
 const client = isRazorpayConfigured
   ? new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET })
   : null;
 
 // Simulated payments exist only so checkout can be exercised locally without a gateway
-// account. env.ts refuses to boot production without keys; this is a second lock.
-const simulationEnabled = !client && !isProduction;
+// account. env.ts refuses to boot production without keys; this is a second lock, and
+// SIMULATE_PAYMENTS=false turns it off on a server that isn't in production mode yet.
+const simulationEnabled = !client && !isProduction && env.SIMULATE_PAYMENTS;
 
 const SIMULATED_ORDER_PREFIX = 'order_dev_';
 
@@ -24,7 +26,7 @@ export interface RazorpayOrderResult {
 }
 
 function requireClient() {
-  if (!client) throw new Error('Razorpay is not configured');
+  if (!client) throw new AppError(503, 'PAYMENTS_UNAVAILABLE', "Online payment isn't available yet. Please contact us to place an order.");
   return client;
 }
 

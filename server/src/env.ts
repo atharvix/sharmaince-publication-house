@@ -46,6 +46,12 @@ const schema = z
     // Unpaid orders release their reserved stock after this many minutes.
     PENDING_ORDER_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 
+    // Fake payments for local testing when Razorpay isn't configured (never in production).
+    // Set to false on any server real people can reach, so nobody can place a fake paid order.
+    SIMULATE_PAYMENTS: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
     // Optional: lets staff fill a new book's details from its cover photo (src/lib/coverReader.ts).
     ANTHROPIC_API_KEY: z.string().default(''),
     SMTP_HOST: z.string().default(''),

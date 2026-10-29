@@ -112,7 +112,7 @@ export default function BulkOrders() {
                   id="bulk-books"
                   name="titlesOfInterest"
                   label="Titles or subjects of interest"
-                  placeholder="e.g. Foundations of Nursing Practice — 60 copies"
+                  placeholder="e.g. Applied Psychology & Applied Sociology for Nurses, 60 copies"
                   hint="List specific titles and quantities if known, or the subjects you need covered."
                 />
                 <TextareaField id="bulk-notes" name="notes" label="Additional notes" placeholder="Delivery timeline, purchase-order requirements, or anything else we should know." />

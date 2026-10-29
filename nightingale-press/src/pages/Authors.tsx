@@ -20,6 +20,7 @@ const SUBJECT_AREAS = [
   'Anatomy & Physiology',
   'Paramedical Sciences',
   'Mental Health Nursing',
+  'Psychology & Sociology',
   'Other',
 ];
 

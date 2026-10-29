@@ -112,6 +112,13 @@
   width: min(100%, 580px);
 }
 
+@media (min-width: 1000px) {
+  /* Sit against the right edge so the spread spans the page: words left, books right. */
+  .pile {
+    margin-inline: auto 0;
+  }
+}
+
 .cut {
   --w: 34%;
   position: absolute;
@@ -234,6 +241,31 @@
     height: 3.75rem;
     font-size: 0.6875rem;
   }
+}
+
+/*
+ * The pile is laid out for five covers. With fewer, each count gets its own arrangement
+ * so the covers fill the space instead of leaving gaps where the missing ones would be.
+ */
+.pile[data-count='1'] { height: 560px; }
+.pile[data-count='1'] .cut1 { --w: 58%; --r: -3deg; left: 21%; top: 56px; }
+
+.pile[data-count='2'] { height: 500px; }
+.pile[data-count='2'] .cut { --w: 44%; }
+.pile[data-count='2'] .cut1 { left: 4%; top: 70px; }
+.pile[data-count='2'] .cut2 { left: 50%; top: 20px; }
+
+.pile[data-count='3'] { height: 440px; }
+.pile[data-count='3'] .cut { --w: 36%; }
+.pile[data-count='3'] .cut1 { left: 0; top: 80px; }
+.pile[data-count='3'] .cut2 { left: 32%; top: 20px; }
+.pile[data-count='3'] .cut3 { left: 64%; top: 100px; }
+
+@media (max-width: 640px) {
+  .pile[data-count='1'] { height: 420px; }
+  .pile[data-count='1'] .cut1 { --w: 62%; left: 18%; top: 44px; }
+  .pile[data-count='2'] { height: 380px; }
+  .pile[data-count='3'] { height: 340px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
