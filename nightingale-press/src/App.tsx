@@ -38,6 +38,7 @@ import AccountWishlist from './pages/account/AccountWishlist';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminBooks from './pages/admin/AdminBooks';
+import AdminHero from './pages/admin/AdminHero';
 import AdminAuthors from './pages/admin/AdminAuthors';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminBulkOrders from './pages/admin/AdminBulkOrders';
@@ -121,6 +122,7 @@ function App() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="books" element={<AdminBooks />} />
+        <Route path="hero" element={<AdminHero />} />
         <Route path="authors" element={<AdminAuthors />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="bulk-orders" element={<AdminBulkOrders />} />

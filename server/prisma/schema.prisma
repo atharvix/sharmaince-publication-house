@@ -94,9 +94,9 @@ model User {
   name                   String
   role                   Role      @default(CUSTOMER)
   isActive               Boolean   @default(true)
-  passwordResetToken     String?   @unique
+  // SHA-256 of the emailed reset token; the raw token is never stored.
+  passwordResetTokenHash String?   @unique
   passwordResetExpires   DateTime?
-  refreshTokenVersion    Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -107,8 +107,25 @@ model User {
   assignedBulkOrders     BulkOrderRequest[]  @relation("BulkOrderAssignee")
   authorApplicationNotes AuthorApplicationNote[]
   contentEdits           ContentPage[]       @relation("ContentEditor")
+  refreshSessions        RefreshSession[]
 
   @@index([role])
+}
+
+// One row per issued refresh token. Tokens are rotated on every refresh; presenting a
+// token that was already rotated revokes the whole family (likely theft).
+model RefreshSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId   String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  rotatedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
 }
 
 model Address {
@@ -158,12 +175,14 @@ model Book {
   categoryId    String
   category      Category      @relation(fields: [categoryId], references: [id])
   authors       BookAuthor[]
-  priceMinor    Int
+  // Price, edition, ISBN and pages can come after a book is announced; a book with no
+  // price is listed but can't be bought (see pricing.ts).
+  priceMinor    Int?
   currency      String        @default("INR")
-  edition       String
+  edition       String?
   format        BookFormat
-  isbn          String        @unique
-  pages         Int
+  isbn          String?       @unique
+  pages         Int?
   status        BookStatus    @default(PUBLISHED)
   availability  Availability  @default(IN_STOCK)
   stockQuantity Int           @default(0)
@@ -173,6 +192,12 @@ model Book {
   coverImageUrl String?
   featured      Boolean       @default(false)
   newRelease    Boolean       @default(false)
+  // Home page hero: books with a position are shown there in that order (lowest first).
+  heroOrder     Int?
+  // The handwritten note beside the cover in the hero; empty shows price and pages.
+  heroNote      String?
+  // Ink colour of that note and its arrow: blue, pink, green, purple or orange.
+  heroColor     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -210,6 +235,7 @@ model Promotion {
   code             String       @unique
   description      String
   discountType     DiscountType
+  // PERCENT: whole percent (1-100). FLAT: amount off in minor units (paise).
   discountValue    Int
   minSpendMinor    Int?
   maxRedemptions   Int?
@@ -259,7 +285,8 @@ model Order {
   updatedAt        DateTime     @updatedAt
 
   @@index([userId])
-  @@index([status])
+  @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -293,6 +320,7 @@ model Payment {
   updatedAt         DateTime      @updatedAt
 
   @@index([orderId])
+  @@index([razorpayPaymentId])
 }
 
 model PaymentWebhookEvent {
@@ -391,4 +419,5 @@ model AuditEvent {
   createdAt    DateTime @default(now())
 
   @@index([entityType, entityId])
+  @@index([createdAt])
 }

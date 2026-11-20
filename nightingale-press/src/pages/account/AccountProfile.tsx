@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -15,11 +16,12 @@ interface Profile {
 }
 
 export default function AccountProfile() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const { data: profile, loading, error, reload } = useFetch(() => api.get<{ profile: Profile }>('/me/profile').then((r) => r.profile), []);
 
   const [nameSaving, setNameSaving] = useState(false);
-  const [nameMessage, setNameMessage] = useState<string | null>(null);
+  const [nameMessage, setNameMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -32,9 +34,9 @@ export default function AccountProfile() {
       await api.patch('/me/profile', { name: form.get('name') });
       await refreshUser();
       reload();
-      setNameMessage('Saved.');
+      setNameMessage({ type: 'success', text: 'Saved.' });
     } catch (err) {
-      setNameMessage(err instanceof ApiError ? err.message : 'Could not save changes.');
+      setNameMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Could not save changes.' });
     } finally {
       setNameSaving(false);
     }
@@ -50,13 +52,14 @@ export default function AccountProfile() {
         currentPassword: form.get('currentPassword'),
         newPassword: form.get('newPassword'),
       });
-      setPasswordMessage({ type: 'success', text: 'Password updated.' });
-      event.currentTarget.reset();
     } catch (err) {
       setPasswordMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Could not update password.' });
-    } finally {
       setPasswordSaving(false);
+      return;
     }
+    // Changing the password signs out every session, this one included.
+    await logout();
+    navigate('/login', { replace: true, state: { notice: 'Password updated — please sign in with your new password.' } });
   }
 
   if (loading) return <LoadingBlock label="Loading profile…" />;
@@ -71,7 +74,14 @@ export default function AccountProfile() {
         <form onSubmit={handleNameSubmit} style={{ display: 'grid', gap: 'var(--space-5)', maxWidth: '420px' }}>
           <InputField id="profile-name" name="name" label="Full name" required defaultValue={profile.name} />
           <InputField id="profile-email" label="Email address" value={profile.email} disabled readOnly hint="Contact support to change your email." />
-          {nameMessage && <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)' }}>{nameMessage}</p>}
+          {nameMessage && (
+            <p
+              role={nameMessage.type === 'error' ? 'alert' : 'status'}
+              style={{ fontSize: 'var(--fs-sm)', color: nameMessage.type === 'success' ? 'var(--color-success)' : 'var(--color-error)' }}
+            >
+              {nameMessage.text}
+            </p>
+          )}
           <Button type="submit" size="md" variant="primary" disabled={nameSaving}>
             {nameSaving ? 'Saving…' : 'Save changes'}
           </Button>
@@ -91,10 +101,12 @@ export default function AccountProfile() {
             label="New password"
             required
             minLength={8}
-            hint="Include an uppercase letter, a lowercase letter and a number."
+            hint="Include an uppercase letter, a lowercase letter and a number. You'll be signed out everywhere afterwards."
           />
           {passwordMessage && (
-            <p style={{ fontSize: 'var(--fs-sm)', color: passwordMessage.type === 'success' ? 'var(--color-success)' : 'var(--color-error)' }}>
+            <p
+              role={passwordMessage.type === 'error' ? 'alert' : 'status'}
+              style={{ fontSize: 'var(--fs-sm)', color: passwordMessage.type === 'success' ? 'var(--color-success)' : 'var(--color-error)' }}>
               {passwordMessage.text}
             </p>
           )}

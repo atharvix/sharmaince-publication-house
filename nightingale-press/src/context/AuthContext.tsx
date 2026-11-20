@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { api, setAccessToken, setAuthHooks } from '../lib/api';
+import { api, refreshAccessToken, setAccessToken, setAuthHooks } from '../lib/api';
 import type { ApiUser } from '../types/api';
 
 interface AuthContextValue {
@@ -22,18 +22,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onRefreshed: (nextUser) => setUser(nextUser),
       onRefreshFailed: () => setUser(null),
     });
-  }, []);
-
-  useEffect(() => {
-    // Silently try to restore a session from the refresh cookie on first load.
-    api
-      .post<{ user: ApiUser; accessToken: string }>('/auth/refresh')
-      .then((res) => {
-        setAccessToken(res.accessToken);
-        setUser(res.user);
-      })
-      .catch(() => setUser(null))
-      .finally(() => setInitializing(false));
+    // Silently restore a session from the refresh cookie on first load. The hooks above
+    // set the user; going through the shared refresh avoids racing other early requests.
+    refreshAccessToken().finally(() => setInitializing(false));
   }, []);
 
   async function login(email: string, password: string) {
@@ -51,7 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await api.post('/auth/logout').catch(() => undefined);
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Signing out locally still matters if the server can't be reached; the refresh
+      // session then simply expires on its own.
+    }
     setAccessToken(null);
     setUser(null);
   }

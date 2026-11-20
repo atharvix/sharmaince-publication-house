@@ -11,11 +11,12 @@ export interface Book {
   subtitle?: string;
   author: string;
   category: Category;
-  price: number;
-  edition: string;
+  /** null until the press announces it; such a book is listed but can't be bought yet. */
+  price: number | null;
+  edition: string | null;
   format: 'Paperback' | 'Hardbound' | 'E-Book';
-  isbn: string;
-  pages: number;
+  isbn: string | null;
+  pages: number | null;
   availability: 'In Stock' | 'Pre-Order' | 'Out of Stock';
   description: string;
   highlights: string[];
@@ -23,6 +24,12 @@ export interface Book {
   coverImageUrl?: string | null;
   featured?: boolean;
   newRelease?: boolean;
+  /** Position in the home page hero (1 = first); null keeps it out of the hero. */
+  heroOrder?: number | null;
+  /** The handwritten note beside it in the hero; empty shows price and pages. */
+  heroNote?: string | null;
+  /** Ink colour of that note and its arrow. */
+  heroColor?: import('./api').HeroColor | null;
 }
 
 export interface Author {

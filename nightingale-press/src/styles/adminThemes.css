@@ -1,129 +1,72 @@
 /*
  * Admin/Staff workspace themes.
  *
- * These redefine the exact same design-token variable names the public site uses
- * (tokens.css), scoped under a `data-admin-theme` attribute set on the admin shell
- * root. Because custom properties inherit, every admin page, form, table and the
- * shared Button/FormField components pick these up automatically with no other
- * code changes — the public storefront is untouched since it never carries the
- * attribute.
+ * These redefine the same design-token names the public site uses (tokens.css), scoped
+ * under the `data-admin-theme` attribute on the admin shell, so every admin page and
+ * shared component picks them up. The ids are kept from the original themes so each
+ * person's saved choice still applies.
  */
 
-/* ---------- Forest & Brass (default) — the site's own pine/brass identity ---------- */
+/* Paper (default): the public site's own look */
 [data-admin-theme='forest-brass'] {
   color-scheme: light;
-
-  --color-primary-900: #0a3836;
-  --color-primary-700: #0e5c56;
-  --color-primary-600: #136f67;
-  --color-primary-500: #1b8278;
-  --color-primary-100: #e4efec;
-  --color-primary-50: #f1f7f5;
-
-  --color-accent-700: #a46a1f;
-  --color-accent-600: #c6872c;
-  --color-accent-500: #d99a3c;
-  --color-accent-100: #faebd2;
-
-  --color-ink-900: #15211e;
-  --color-ink-700: #35433f;
-  --color-ink-500: #5c6b66;
-  --color-ink-300: #93a39d;
-  --color-paper-0: #ffffff;
-  --color-paper-50: #fbf8f2;
-  --color-paper-100: #f4efe3;
-  --color-paper-200: #e9e1cf;
-  --color-border: #e1d9c6;
-
-  --color-success: #2f7d4f;
-  --color-success-bg: #e9f5ee;
-  --color-error: #b3432b;
-  --color-error-bg: #fbece7;
-  --color-focus-ring: #1b8278;
-
-  --shadow-sm: 0 1px 2px rgba(21, 33, 30, 0.06), 0 1px 1px rgba(21, 33, 30, 0.04);
-  --shadow-md: 0 8px 24px -8px rgba(21, 33, 30, 0.18);
-  --shadow-lg: 0 20px 48px -12px rgba(21, 33, 30, 0.22);
-  --shadow-focus: 0 0 0 3px rgba(27, 130, 120, 0.3);
 }
 
-/* ---------- Midnight Ink — a dark, moody evening workspace ---------- */
+/* Night: a dark workspace for low-light sessions */
 [data-admin-theme='midnight-ink'] {
   color-scheme: dark;
 
-  --color-primary-900: #0a0f26;
-  /* Lighter than a literal "700 weight" so it still reads as text/links/outline-button
-     color directly on this theme's dark page and card backgrounds. */
-  --color-primary-700: #5b7fd1;
-  --color-primary-600: #2a4a93;
-  --color-primary-500: #4a6cc4;
-  /* Kept pale (not inverted) — these are reused by shared components (Button's
-     .outline hover, loading-spinner track, drag-and-drop highlight) as light tint
-     fills paired with dark text; inverting them would break those elements. */
-  --color-primary-100: #dde3f5;
-  --color-primary-50: #eef1fa;
+  --color-primary-900: #f1ede6;
+  --color-primary-700: #f1ede6;
+  --color-primary-600: #d9d3cb;
+  --color-primary-500: #d9d3cb;
+  --color-primary-100: #2a2730;
+  --color-primary-50: #221f27;
 
-  --color-accent-700: #8a94a3;
-  --color-accent-600: #aab3bd;
-  --color-accent-500: #cad2d9;
-  --color-accent-100: #e8eaed;
+  --color-pink-700: #ff7aa8;
+  --color-pink-100: #3a1f2b;
 
-  --color-ink-900: #f1efe9;
-  --color-ink-700: #cac6bd;
-  --color-ink-500: #938f88;
-  --color-ink-300: #5d5a56;
-  --color-paper-0: #1a1d23;
-  --color-paper-50: #101216;
-  --color-paper-100: #22262c;
-  --color-paper-200: #2b3038;
-  --color-border: #343a42;
+  --color-accent-700: #ffd84d;
+  --color-accent-600: #e8c13a;
+  --color-accent-500: #ffd84d;
+  --color-accent-100: #3a3318;
 
-  --color-success: #5fbf8d;
-  --color-success-bg: #15261e;
-  --color-error: #e2806a;
-  --color-error-bg: #341f19;
-  --color-focus-ring: #4a6cc4;
+  --color-green-500: #5fd38d;
+  --color-green-100: #173023;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 28px -8px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 24px 56px -12px rgba(0, 0, 0, 0.65);
-  --shadow-focus: 0 0 0 3px rgba(74, 108, 196, 0.45);
+  --color-ink-900: #f1ede6;
+  --color-ink-700: #ddd7cf;
+  --color-ink-500: #b3acb6;
+  --color-ink-300: #7d7681;
+  --color-paper-0: #211f25;
+  --color-paper-50: #17161a;
+  --color-paper-100: #2a2730;
+  --color-paper-200: #35313b;
+  --color-border: #35313b;
+  --color-border-strong: #4a4551;
+
+  --color-success: #5fd38d;
+  --color-success-bg: #173023;
+  --color-error: #ff8f80;
+  --color-error-bg: #3a1d1a;
+  --color-focus-ring: #f1ede6;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -16px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.35), 0 22px 44px -20px rgba(0, 0, 0, 0.8);
 }
 
-/* ---------- Ivory & Burgundy — classic literary elegance ---------- */
+/* Ivory: warmer paper with a deep burgundy accent */
 [data-admin-theme='ivory-burgundy'] {
   color-scheme: light;
 
-  --color-primary-900: #3d0f1a;
-  --color-primary-700: #6b1b2e;
-  --color-primary-600: #86253a;
-  --color-primary-500: #a13049;
-  --color-primary-100: #f3e1e3;
-  --color-primary-50: #faf0f1;
+  --color-pink-700: #7a1f3d;
+  --color-pink-100: #f6e3e8;
 
-  --color-accent-700: #8a6a1f;
-  --color-accent-600: #ab8527;
-  --color-accent-500: #c9a53a;
-  --color-accent-100: #f6ecd2;
-
-  --color-ink-900: #2a1d1a;
-  --color-ink-700: #4a3733;
-  --color-ink-500: #7a655f;
-  --color-ink-300: #ab9a92;
-  --color-paper-0: #fffdfa;
-  --color-paper-50: #faf6ee;
+  --color-ink-500: #5f5862;
+  --color-paper-50: #fbf5ea;
   --color-paper-100: #f3ead9;
-  --color-paper-200: #e8dcc3;
-  --color-border: #ddcfae;
-
-  --color-success: #2f7d4f;
-  --color-success-bg: #e9f5ee;
-  --color-error: #a13049;
-  --color-error-bg: #f3e1e3;
-  --color-focus-ring: #a13049;
-
-  --shadow-sm: 0 1px 2px rgba(42, 29, 26, 0.08), 0 1px 1px rgba(42, 29, 26, 0.05);
-  --shadow-md: 0 8px 24px -8px rgba(42, 29, 26, 0.2);
-  --shadow-lg: 0 20px 48px -12px rgba(42, 29, 26, 0.24);
-  --shadow-focus: 0 0 0 3px rgba(161, 48, 73, 0.3);
+  --color-paper-200: #e9dcc4;
+  --color-border: #e4d7bf;
+  --color-border-strong: #cdbd9f;
 }

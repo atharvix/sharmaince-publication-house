@@ -1,21 +1,18 @@
 .hero {
-  padding-block: var(--space-8) var(--space-7);
-  background: linear-gradient(180deg, var(--color-primary-50), var(--color-paper-50) 70%);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.crumbs {
-  margin-bottom: var(--space-5);
+  padding-block: var(--space-7) var(--space-6);
+  border-bottom: 1.5px dashed var(--color-ink-900);
 }
 
 .title {
-  font-size: var(--fs-3xl);
-  max-width: 18ch;
+  margin-top: var(--space-4);
+  font-size: clamp(2.25rem, 5.5vw, var(--fs-4xl));
+  max-width: 20ch;
 }
 
 .subtitle {
   margin-top: var(--space-4);
   font-size: var(--fs-md);
+  font-weight: 500;
   max-width: 60ch;
-  color: var(--color-ink-500);
+  color: var(--color-ink-700);
 }

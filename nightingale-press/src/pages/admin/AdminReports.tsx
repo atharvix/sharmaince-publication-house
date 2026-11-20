@@ -3,6 +3,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { api } from '../../lib/api';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AdminLayout.module.css';
+import { formatRupees, humanizeEnum } from '../../lib/format';
 
 interface StatusRow {
   status: string;
@@ -65,10 +66,10 @@ export default function AdminReports() {
               <tbody>
                 {data.byStatus.map((row) => (
                   <tr key={row.status}>
-                    <td>{row.status}</td>
+                    <td>{humanizeEnum(row.status)}</td>
                     <td>{row.orders}</td>
-                    <td>₹{row.grossSales.toLocaleString('en-IN')}</td>
-                    <td>₹{row.discounts.toLocaleString('en-IN')}</td>
+                    <td>{formatRupees(row.grossSales)}</td>
+                    <td>{formatRupees(row.discounts)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -90,7 +91,7 @@ export default function AdminReports() {
                   <tr key={row.title}>
                     <td>{row.title}</td>
                     <td>{row.unitsSold}</td>
-                    <td>₹{row.revenue.toLocaleString('en-IN')}</td>
+                    <td>{formatRupees(row.revenue)}</td>
                   </tr>
                 ))}
               </tbody>

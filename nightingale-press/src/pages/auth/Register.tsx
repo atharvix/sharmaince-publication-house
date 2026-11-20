@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { safeRedirect } from '../../lib/redirect';
 import { InputField } from '../../components/ui/FormField';
 import { Button } from '../../components/ui/Button';
 import { AuthLayout } from './AuthLayout';
@@ -11,7 +12,7 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect') ?? '/account';
+  const redirect = safeRedirect(searchParams.get('redirect'), '/account');
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +33,7 @@ export default function Register() {
   }
 
   return (
-    <AuthLayout eyebrow="Join Nightingale" title="Create your account" subtitle="Save your addresses, track orders and build a wishlist.">
+    <AuthLayout title="Create your account" subtitle="Save your addresses, track orders and build a wishlist.">
       <form className={styles.form} onSubmit={handleSubmit}>
         <InputField id="register-name" name="name" label="Full name" required placeholder="Your name" />
         <InputField id="register-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />

@@ -26,15 +26,15 @@
 }
 
 .step.done .dot {
-  background: var(--color-primary-700);
-  border-color: var(--color-primary-700);
+  background: var(--color-ink-900);
+  border-color: var(--color-ink-900);
   color: var(--color-paper-0);
 }
 
 .step.current .dot {
   background: var(--color-accent-500);
-  border-color: var(--color-accent-500);
-  color: var(--color-primary-900);
+  border-color: var(--color-ink-900);
+  color: var(--color-ink-900);
 }
 
 .line {
@@ -48,7 +48,7 @@
 }
 
 .step.done .line {
-  background: var(--color-primary-700);
+  background: var(--color-ink-900);
 }
 
 .step:first-child .line {
@@ -72,4 +72,6 @@
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: var(--fs-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }

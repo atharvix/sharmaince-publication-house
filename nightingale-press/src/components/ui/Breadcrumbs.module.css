@@ -3,15 +3,17 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
+  font-family: var(--font-hand);
+  font-weight: 700;
+  font-size: var(--fs-md);
   color: var(--color-ink-500);
 }
 
 .trail a:hover {
-  color: var(--color-primary-700);
+  color: var(--color-ink-900);
+  background: linear-gradient(transparent 60%, var(--color-accent-500) 60%);
 }
 
 .current {
   color: var(--color-ink-900);
-  font-weight: 500;
 }

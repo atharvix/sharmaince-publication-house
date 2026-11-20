@@ -142,11 +142,11 @@ describe('book cover uploads', () => {
       .set('Authorization', `Bearer ${token}`)
       .attach('cover', PNG_BYTES, 'cover.png');
     expect(upload.status).toBe(200);
-    expect(upload.body.book.coverImageUrl).toMatch(/^\/uploads\/covers\/.+\.png$/);
+    expect(upload.body.book.coverImageUrl).toMatch(/^\/uploads\/covers\/.+\.jpg$/);
 
     const fetched = await request(app).get(upload.body.book.coverImageUrl);
     expect(fetched.status).toBe(200);
-    expect(fetched.headers['content-type']).toContain('image/png');
+    expect(fetched.headers['content-type']).toContain('image/jpeg');
 
     const removed = await request(app).delete(`/api/admin/books/${bookId}/cover`).set('Authorization', `Bearer ${token}`);
     expect(removed.status).toBe(200);

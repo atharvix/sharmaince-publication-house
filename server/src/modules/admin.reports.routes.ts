@@ -4,11 +4,11 @@ import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { minorToRupees } from '../lib/money.js';
+import { PAID_STATUSES } from './orders.service.js';
 
 export const adminReportsRouter = Router();
 adminReportsRouter.use(requireAuth, requireRole('STAFF', 'ADMIN'));
-
-const PAID_STATUSES = ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const;
 
 // Shared landing-page dashboard for both roles — revenue is admin-only, so staff get
 // the same operational counts (orders, applications, bulk requests) without it.
@@ -35,7 +35,7 @@ adminReportsRouter.get(
       pendingAuthorApplications,
       pendingBulkOrders,
       ...(isAdmin
-        ? { newUsersCount, totalRevenue: (revenueAgg!._sum.totalMinor ?? 0) / 100 }
+        ? { newUsersCount, totalRevenue: minorToRupees(revenueAgg!._sum.totalMinor ?? 0) }
         : { newUsersCount: null, totalRevenue: null }),
     });
   }),
@@ -44,47 +44,50 @@ adminReportsRouter.get(
 // Detailed sales/financial analytics — admin-only.
 adminReportsRouter.use('/sales', requireRole('ADMIN'));
 
-const reportQuerySchema = z.object({
-  query: z.object({
-    from: z.string().datetime().optional(),
-    to: z.string().datetime().optional(),
-  }),
+const reportQuery = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
 });
 
 adminReportsRouter.get(
   '/sales',
-  validate({ query: reportQuerySchema.shape.query }),
+  validate({ query: reportQuery }),
   asyncHandler(async (req, res) => {
-    const { from, to } = req.query as unknown as z.infer<typeof reportQuerySchema>['query'];
+    const { from, to } = req.query as unknown as z.infer<typeof reportQuery>;
     const dateFilter = {
       ...(from ? { gte: new Date(from) } : {}),
       ...(to ? { lte: new Date(to) } : {}),
     };
     const where = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
 
-    const [byStatus, orderItems] = await Promise.all([
+    const [byStatus, bestSellerRows] = await Promise.all([
       prisma.order.groupBy({ by: ['status'], where, _count: { _all: true }, _sum: { totalMinor: true, discountMinor: true } }),
-      prisma.orderItem.findMany({
+      prisma.orderItem.groupBy({
+        by: ['bookId'],
         where: { order: { ...where, status: { in: [...PAID_STATUSES] } } },
-        select: { titleSnapshot: true, quantity: true, lineTotalMinor: true },
+        _sum: { quantity: true, lineTotalMinor: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 10,
       }),
     ]);
 
-    const bestSellerMap = new Map<string, { title: string; unitsSold: number; revenue: number }>();
-    for (const item of orderItems) {
-      const entry = bestSellerMap.get(item.titleSnapshot) ?? { title: item.titleSnapshot, unitsSold: 0, revenue: 0 };
-      entry.unitsSold += item.quantity;
-      entry.revenue += item.lineTotalMinor / 100;
-      bestSellerMap.set(item.titleSnapshot, entry);
-    }
-    const bestSellers = [...bestSellerMap.values()].sort((a, b) => b.unitsSold - a.unitsSold).slice(0, 10);
+    const titles = await prisma.book.findMany({
+      where: { id: { in: bestSellerRows.map((row) => row.bookId) } },
+      select: { id: true, title: true },
+    });
+    const titleById = new Map(titles.map((book) => [book.id, book.title]));
+    const bestSellers = bestSellerRows.map((row) => ({
+      title: titleById.get(row.bookId) ?? 'Unknown title',
+      unitsSold: row._sum.quantity ?? 0,
+      revenue: minorToRupees(row._sum.lineTotalMinor ?? 0),
+    }));
 
     res.json({
       byStatus: byStatus.map((row) => ({
         status: row.status,
         orders: row._count._all,
-        grossSales: (row._sum.totalMinor ?? 0) / 100,
-        discounts: (row._sum.discountMinor ?? 0) / 100,
+        grossSales: minorToRupees(row._sum.totalMinor ?? 0),
+        discounts: minorToRupees(row._sum.discountMinor ?? 0),
       })),
       bestSellers,
     });

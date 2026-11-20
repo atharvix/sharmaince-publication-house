@@ -130,3 +130,38 @@ describe('checkout', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('books announced before they are priced', () => {
+  it('are listed with no price but cannot be quoted or bought', async () => {
+    const template = await prisma.book.findFirstOrThrow({ where: { status: 'PUBLISHED' }, include: { authors: true } });
+    const book = await prisma.book.create({
+      data: {
+        slug: `unpriced-${Date.now()}`,
+        title: 'Announced Title',
+        categoryId: template.categoryId,
+        format: 'PAPERBACK',
+        status: 'PUBLISHED',
+        // No stock, so tests that grab any stocked book never pick this one.
+        stockQuantity: 0,
+        description: 'Coming soon.',
+        highlights: [],
+        authors: { create: [{ authorId: template.authors[0].authorId }] },
+      },
+    });
+
+    try {
+      const listed = await request(app).get(`/api/catalogue/books/${book.slug}`);
+      expect(listed.status).toBe(200);
+      expect(listed.body.book).toMatchObject({ price: null, isbn: null, pages: null, edition: null });
+
+      const quote = await request(app)
+        .post('/api/checkout/quote')
+        .set('Authorization', `Bearer ${await registerAndGetToken()}`)
+        .send({ items: [{ bookId: book.id, quantity: 1 }] });
+      expect(quote.status).toBe(400);
+      expect(quote.body.error.message).toMatch(/isn't on sale yet/);
+    } finally {
+      await prisma.book.delete({ where: { id: book.id } });
+    }
+  });
+});

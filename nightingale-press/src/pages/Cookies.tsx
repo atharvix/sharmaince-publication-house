@@ -25,7 +25,7 @@ export default function Cookies() {
       updated="1 October 2026"
       intro={
         <p>
-          This policy explains how Nightingale Academic Press uses cookies and similar
+          This policy explains how Sharmiance Publication House & Distribution uses cookies and similar
           technologies, and the choices available to you.
         </p>
       }

@@ -1,7 +1,11 @@
 node_modules
 dist
+uploads
+tests
+coverage
 .env
-.env.test
-.env.local
+.env.*
+!.env.example
 *.log
-uploads/
+Dockerfile
+docker-compose.yml

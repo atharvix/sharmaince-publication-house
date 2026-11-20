@@ -1,22 +1,45 @@
 import { useState } from 'react';
 import { useFetch } from '../../hooks/useFetch';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { Pager, type PageMeta } from '../../components/ui/Pager';
 import { api, ApiError } from '../../lib/api';
 import type { ApiOrder, ApiOrderStatus } from '../../types/api';
 import { Button } from '../../components/ui/Button';
 import { LoadingBlock, ErrorBlock } from '../../components/ui/RequestState';
 import styles from './AdminLayout.module.css';
+import { formatMinor, humanizeEnum } from '../../lib/format';
 
 const STATUSES: ApiOrderStatus[] = ['PENDING_PAYMENT', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
 
+// Mirrors ADMIN_TRANSITIONS in server/src/modules/orders.service.ts (the server enforces it).
+// "Paid" is deliberately absent: only the payment gateway can mark an order paid.
 const NEXT_STATUS: Record<ApiOrderStatus, ApiOrderStatus[]> = {
-  PENDING_PAYMENT: ['PAID', 'CANCELLED'],
-  PAID: ['PROCESSING', 'CANCELLED', 'REFUNDED'],
-  PROCESSING: ['SHIPPED', 'CANCELLED', 'REFUNDED'],
+  PENDING_PAYMENT: ['CANCELLED'],
+  PAID: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
   SHIPPED: ['DELIVERED', 'REFUNDED'],
   DELIVERED: ['REFUNDED'],
   CANCELLED: [],
   REFUNDED: [],
 };
+
+const ACTION_LABEL: Record<ApiOrderStatus, string> = {
+  PENDING_PAYMENT: 'Mark pending',
+  PAID: 'Mark paid',
+  PROCESSING: 'Start processing',
+  SHIPPED: 'Mark shipped',
+  DELIVERED: 'Mark delivered',
+  CANCELLED: 'Cancel order',
+  REFUNDED: 'Refund',
+};
+
+function confirmMessage(order: ApiOrder, next: ApiOrderStatus) {
+  const paid = order.status !== 'PENDING_PAYMENT';
+  if (next === 'REFUNDED') return `Refund ${formatMinor(order.totalMinor)} to the customer for ${order.orderNumber}? This cannot be undone.`;
+  if (next === 'CANCELLED' && paid) return `Cancel ${order.orderNumber} and refund ${formatMinor(order.totalMinor)} to the customer? This cannot be undone.`;
+  if (next === 'CANCELLED') return `Cancel ${order.orderNumber}? Its stock will be released.`;
+  return null;
+}
 
 interface AdminOrder extends ApiOrder {
   user: { name: string; email: string };
@@ -25,23 +48,28 @@ interface AdminOrder extends ApiOrder {
 export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<ApiOrderStatus | ''>('');
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const debouncedQ = useDebouncedValue(q.trim());
   const [trackingDraft, setTrackingDraft] = useState<Record<string, { carrier: string; number: string; url: string }>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data, loading, error, reload } = useFetch(() => {
+  const { data, loading, refreshing, error, reload } = useFetch(() => {
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
-    if (q) params.set('q', q);
-    params.set('pageSize', '50');
-    return api.get<{ items: AdminOrder[] }>(`/admin/orders?${params.toString()}`);
-  }, [statusFilter, q]);
+    if (debouncedQ) params.set('q', debouncedQ);
+    params.set('page', String(page));
+    params.set('pageSize', '25');
+    return api.get<{ items: AdminOrder[] } & PageMeta>(`/admin/orders?${params.toString()}`);
+  }, [statusFilter, debouncedQ, page]);
 
-  async function handleStatusChange(orderId: string, status: ApiOrderStatus) {
-    setBusyId(orderId);
+  async function handleStatusChange(order: AdminOrder, status: ApiOrderStatus) {
+    const prompt = confirmMessage(order, status);
+    if (prompt && !window.confirm(prompt)) return;
+    setBusyId(order.id);
     setActionError(null);
     try {
-      await api.patch(`/admin/orders/${orderId}/status`, { status });
+      await api.patch(`/admin/orders/${order.id}/status`, { status });
       reload();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Could not update order status.');
@@ -80,14 +108,26 @@ export default function AdminOrders() {
           className={styles.input}
           placeholder="Search by order number or customer email"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Search orders"
           style={{ minWidth: 280 }}
         />
-        <select className={styles.input} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ApiOrderStatus | '')}>
+        <select
+          className={styles.input}
+          value={statusFilter}
+          aria-label="Filter by status"
+          onChange={(e) => {
+            setStatusFilter(e.target.value as ApiOrderStatus | '');
+            setPage(1);
+          }}
+        >
           <option value="">All statuses</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {humanizeEnum(s)}
             </option>
           ))}
         </select>
@@ -117,9 +157,9 @@ export default function AdminOrders() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className={styles.badge} style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}>
-                    {order.status}
+                    {humanizeEnum(order.status)}
                   </span>
-                  <p style={{ fontWeight: 700, marginTop: 'var(--space-2)' }}>₹{(order.totalMinor / 100).toLocaleString('en-IN')}</p>
+                  <p style={{ fontWeight: 700, marginTop: 'var(--space-2)' }}>{formatMinor(order.totalMinor)}</p>
                 </div>
               </div>
 
@@ -132,9 +172,9 @@ export default function AdminOrders() {
                       variant="outline"
                       type="button"
                       disabled={busyId === order.id}
-                      onClick={() => handleStatusChange(order.id, next)}
+                      onClick={() => handleStatusChange(order, next)}
                     >
-                      Mark {next.replace('_', ' ').toLowerCase()}
+                      {ACTION_LABEL[next]}
                     </Button>
                   ))}
                 </div>
@@ -171,6 +211,7 @@ export default function AdminOrders() {
         })}
       </div>
       )}
+      <Pager meta={data} onPage={setPage} disabled={refreshing} />
     </div>
   );
 }

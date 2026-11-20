@@ -16,15 +16,6 @@
   box-shadow: var(--shadow-md);
 }
 
-.eyebrow {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-accent-700);
-  margin-bottom: var(--space-3);
-}
-
 .title {
   font-size: var(--fs-xl);
 }
@@ -56,6 +47,14 @@
 .errorBanner {
   background: var(--color-error-bg);
   color: var(--color-error);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+}
+
+.noticeBanner {
+  background: var(--color-success-bg);
+  color: var(--color-success);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);

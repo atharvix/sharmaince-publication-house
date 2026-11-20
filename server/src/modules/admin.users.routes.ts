@@ -6,6 +6,8 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
+import { pageMeta, paginate, paginationQuery } from '../lib/validation.js';
+import { revokeAllSessions } from './auth.routes.js';
 
 export const adminUsersRouter = Router();
 // User administration (viewing accounts, roles, activation) is admin-only — staff do not
@@ -13,20 +15,17 @@ export const adminUsersRouter = Router();
 // customer's email address.
 adminUsersRouter.use(requireAuth, requireRole('ADMIN'));
 
-const listQuerySchema = z.object({
-  query: z.object({
-    q: z.string().optional(),
-    role: z.enum(['CUSTOMER', 'STAFF', 'ADMIN']).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  }),
+const listQuery = z.object({
+  q: z.string().trim().max(200).optional(),
+  role: z.enum(['CUSTOMER', 'STAFF', 'ADMIN']).optional(),
+  ...paginationQuery(),
 });
 
 adminUsersRouter.get(
   '/',
-  validate({ query: listQuerySchema.shape.query }),
+  validate({ query: listQuery }),
   asyncHandler(async (req, res) => {
-    const { q, role, page, pageSize } = req.query as unknown as z.infer<typeof listQuerySchema>['query'];
+    const { q, role, page, pageSize } = req.query as unknown as z.infer<typeof listQuery>;
     const where = {
       ...(role ? { role } : {}),
       ...(q ? { OR: [{ email: { contains: q, mode: 'insensitive' as const } }, { name: { contains: q, mode: 'insensitive' as const } }] } : {}),
@@ -38,31 +37,27 @@ adminUsersRouter.get(
         where,
         select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        ...paginate(page, pageSize),
       }),
     ]);
 
-    res.json({ items: users, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+    res.json({ items: users, ...pageMeta(page, pageSize, total) });
   }),
 );
 
-const updateSchema = z.object({
-  body: z.object({
-    role: z.enum(['CUSTOMER', 'STAFF', 'ADMIN']).optional(),
-    isActive: z.boolean().optional(),
-  }),
+const updateBody = z.object({
+  role: z.enum(['CUSTOMER', 'STAFF', 'ADMIN']).optional(),
+  isActive: z.boolean().optional(),
 });
 
 adminUsersRouter.patch(
   '/:id',
-  validate({ body: updateSchema.shape.body }),
+  validate({ body: updateBody }),
   asyncHandler(async (req, res) => {
-    if (req.body.role && req.user!.role !== 'ADMIN') {
-      throw AppError.forbidden('Only administrators can change user roles');
-    }
-    if (req.params.id === req.user!.id && req.body.isActive === false) {
-      throw AppError.badRequest('You cannot deactivate your own account');
+    const body = req.body as z.infer<typeof updateBody>;
+    // The router is already admin-only; these guard against an admin locking everyone out.
+    if (req.params.id === req.user!.id && (body.isActive === false || (body.role && body.role !== 'ADMIN'))) {
+      throw AppError.badRequest('You cannot deactivate or demote your own account');
     }
 
     const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
@@ -70,16 +65,18 @@ adminUsersRouter.patch(
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: body,
       select: { id: true, name: true, email: true, role: true, isActive: true },
     });
+
+    if (body.isActive === false) await revokeAllSessions(user.id);
 
     await recordAudit({
       actorUserId: req.user!.id,
       action: 'USER_UPDATED',
       entityType: 'User',
       entityId: user.id,
-      metadata: req.body,
+      metadata: { ...body, previousRole: existing.role, previouslyActive: existing.isActive },
     });
 
     res.json({ user });

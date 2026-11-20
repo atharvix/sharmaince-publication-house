@@ -1,12 +1,13 @@
 import { PageHero } from '../components/ui/PageHero';
 import { HubLinks } from '../components/ui/HubLinks';
 import { Reveal } from '../components/ui/Reveal';
+import { CircleHelp, Mail, RotateCcw, Truck } from 'lucide-react';
 
 const LINKS = [
-  { to: '/faqs', icon: '❓', title: 'FAQs', description: 'Answers to common questions about orders, delivery, returns and submissions.' },
-  { to: '/shipping', icon: '🚚', title: 'Shipping', description: 'Delivery regions, charges, estimated timelines and tracking.' },
-  { to: '/returns', icon: '↩', title: 'Returns', description: 'Eligibility, process and timelines for returns and refunds.' },
-  { to: '/contact', icon: '✉', title: 'Contact Us', description: "Can't find an answer? Reach our support team directly." },
+  { to: '/faqs', icon: CircleHelp, title: 'FAQs', description: 'Answers to common questions about orders, delivery, returns and submissions.' },
+  { to: '/shipping', icon: Truck, title: 'Shipping', description: 'Delivery regions, charges, estimated timelines and tracking.' },
+  { to: '/returns', icon: RotateCcw, title: 'Returns', description: 'Eligibility, process and timelines for returns and refunds.' },
+  { to: '/contact', icon: Mail, title: 'Contact Us', description: "Can't find an answer? Reach our support team directly." },
 ];
 
 export default function Support() {

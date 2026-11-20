@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction F — Premiere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Josefin+Sans:wght@400;600;700&family=Spectral:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ebony: #0c0a09;
+    --lacquer: #16120f;
+    --gold: #d9b36a;
+    --brass: #a8843f;
+    --champagne: #f1e2bf;
+    --crimson: #8f1424;
+    --text: #efe6d4;
+    --muted: #b3a68c;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  ::selection { background: var(--gold); color: var(--ebony); }
+  body { background: var(--ebony); color: var(--text); font: 400 18px/1.55 "Spectral", Georgia, serif; }
+  a { color: inherit; text-decoration: none; }
+  .caps { font-family: "Josefin Sans", sans-serif; text-transform: uppercase; letter-spacing: .18em; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; border-bottom: 1px solid rgba(217,179,106,.35); }
+  .mark { font: 400 24px "Limelight"; color: var(--gold); letter-spacing: .04em; }
+  nav { display: flex; gap: 30px; font: 600 13px "Josefin Sans"; text-transform: uppercase; letter-spacing: .2em; color: var(--muted); }
+  .search { font: 600 13px "Josefin Sans"; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--brass); padding: 6px 2px; width: 240px; }
+
+  /* The marquee: stepped tiers climbing to the title, mirrored about the centre */
+  .marquee { position: relative; text-align: center; padding: 56px 24px 44px; overflow: hidden; }
+  .rays { position: absolute; left: 50%; top: -260px; width: 1100px; height: 640px; transform: translateX(-50%);
+          background: repeating-conic-gradient(from 180deg at 50% 100%, rgba(217,179,106,.16) 0deg 3deg, transparent 3deg 12deg);
+          -webkit-mask: radial-gradient(closest-side at 50% 100%, #000 55%, transparent 100%); mask: radial-gradient(closest-side at 50% 100%, #000 55%, transparent 100%); }
+  .kick { position: relative; display: inline-flex; align-items: center; gap: 18px; color: var(--gold); font: 700 14px "Josefin Sans"; letter-spacing: .32em; text-transform: uppercase; }
+  .kick::before, .kick::after { content: ""; width: 80px; height: 7px; border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); }
+  h1 { position: relative; margin-top: 18px; font: 400 104px/0.98 "Limelight"; color: var(--champagne); letter-spacing: .01em;
+       color: var(--gold); text-shadow: 0 2px 0 #6e5424, 0 0 40px rgba(217,179,106,.35); }
+  .sub { position: relative; margin: 18px auto 0; max-width: 40ch; color: var(--muted); font-size: 20px; }
+  .tickets { position: relative; margin-top: 30px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .ticket { padding: 14px 26px; border: 1px solid var(--gold); outline: 1px solid rgba(217,179,106,.45); outline-offset: 3px; font: 700 14px "Josefin Sans"; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); transition: background .3s, color .3s; }
+  .ticket.primary { background: var(--crimson); border-color: var(--crimson); outline-color: var(--crimson); color: var(--champagne);
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px); }
+  .ticket:hover { background: var(--gold); color: var(--ebony); }
+
+  .showing { max-width: 1240px; margin: 0 auto; padding: 0 40px 60px; }
+  .showing h2 { text-align: center; font: 400 34px "Limelight"; color: var(--gold); }
+  .showing h2 small { display: block; font: 600 13px "Josefin Sans"; letter-spacing: .3em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .posters { margin-top: 26px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .poster { border: 1px solid rgba(217,179,106,.5); padding: 10px; background: var(--lacquer); transition: border-color .3s, transform .4s cubic-bezier(.16,1,.3,1); }
+  .poster:hover { border-color: var(--gold); transform: translateY(-6px); }
+  .art { aspect-ratio: 3/4; border: 1px solid rgba(217,179,106,.3); display: flex; flex-direction: column; justify-content: space-between; padding: 18px 14px; text-align: center;
+         background: radial-gradient(120% 80% at 50% 0%, rgba(217,179,106,.14), transparent 60%), var(--ebony); }
+  .art .ed { font: 700 12px "Josefin Sans"; letter-spacing: .28em; color: var(--gold); text-transform: uppercase; }
+  .art .t { font: 400 24px/1.1 "Limelight"; color: var(--champagne); }
+  .art .a { font-size: 14px; color: var(--muted); font-style: italic; }
+  .meta { display: flex; justify-content: space-between; padding: 12px 4px 2px; font: 600 14px "Josefin Sans"; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .meta b { color: var(--gold); }
+
+  @media (max-width: 760px) {
+    header { padding: 14px 16px; } nav, .search { display: none; }
+    h1 { font-size: 58px; } .marquee { padding: 40px 16px 32px; }
+    .showing { padding: 0 16px 40px; } .posters { grid-template-columns: 1fr 1fr; gap: 12px; } .art .t { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="mark" href="#">Nightingale</a>
+  <nav><a href="#">Books</a><a href="#">Authors</a><a href="#">Bulk orders</a><a href="#">Help</a></nav>
+  <div class="search">Search the catalogue</div>
+</header>
+
+<section class="marquee">
+  <div class="rays" aria-hidden="true"></div>
+  <p class="kick">Academic Press · Nursing &amp; Allied Health</p>
+  <h1>Now Showing</h1>
+  <p class="sub">Three new editions this season, and twelve titles in the house.</p>
+  <div class="tickets">
+    <a class="ticket primary" href="#">Find my textbook</a>
+    <a class="ticket" href="#">Inspection copy</a>
+    <a class="ticket" href="#">Bulk quote</a>
+  </div>
+</section>
+
+<section class="showing">
+  <h2><small>New editions</small>Premiering this term</h2>
+  <div class="posters">
+    <a class="poster" href="#"><div class="art"><span class="ed">5th Edition</span><span class="t">Medical-Surgical Nursing<br>Vol. I</span><span class="a">Rao &amp; Varghese</span></div><div class="meta"><span>Hardbound</span><b>₹1,150</b></div></a>
+    <a class="poster" href="#"><div class="art"><span class="ed">5th Edition</span><span class="t">Medical-Surgical Nursing<br>Vol. II</span><span class="a">Rao &amp; Varghese</span></div><div class="meta"><span>Hardbound</span><b>₹1,150</b></div></a>
+    <a class="poster" href="#"><div class="art"><span class="ed">4th Edition</span><span class="t">Foundations of Nursing Practice</span><span class="a">Dr. Meera Chandrasekaran</span></div><div class="meta"><span>Paperback</span><b>₹895</b></div></a>
+    <a class="poster" href="#"><div class="art"><span class="ed">2nd Edition</span><span class="t">Applied Pharmacology for Nurses</span><span class="a">Dr. Shalini Mehta</span></div><div class="meta"><span>Paperback</span><b>₹695</b></div></a>
+  </div>
+</section>
+</body>
+</html>

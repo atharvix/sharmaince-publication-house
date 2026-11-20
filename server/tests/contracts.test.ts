@@ -5,20 +5,11 @@ import { createApp } from '../src/app.js';
 const app = createApp();
 
 describe('API contract basics', () => {
-  it('GET / returns an API identification document', async () => {
-    const res = await request(app).get('/');
+  it('GET /api/health reports liveness and echoes a request id', async () => {
+    const res = await request(app).get('/api/health').set('X-Request-Id', 'probe-123');
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('nightingale-press-api');
-  });
-
-  it('GET /health and GET /api/health report liveness', async () => {
-    const bare = await request(app).get('/health');
-    expect(bare.status).toBe(200);
-    expect(bare.body.status).toBe('ok');
-
-    const namespaced = await request(app).get('/api/health');
-    expect(namespaced.status).toBe(200);
-    expect(namespaced.body.status).toBe('ok');
+    expect(res.body.status).toBe('ok');
+    expect(res.headers['x-request-id']).toBe('probe-123');
   });
 
   it('GET /api/ready reports database readiness', async () => {

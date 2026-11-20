@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Pager, type PageMeta } from '../../components/ui/Pager';
 import { useFetch } from '../../hooks/useFetch';
 import { api, ApiError } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -29,7 +30,12 @@ interface Application {
 }
 
 export default function AdminAuthorApplications() {
-  const { data, loading, error, reload } = useFetch(() => api.get<{ items: Application[] }>('/author-applications/admin').then((r) => r.items), []);
+  const [page, setPage] = useState(1);
+  const { data: pageData, loading, refreshing, error, reload } = useFetch(
+    () => api.get<{ items: Application[] } & PageMeta>(`/author-applications/admin?page=${page}`),
+    [page],
+  );
+  const data = pageData?.items;
   const [actionError, setActionError] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
 
@@ -56,7 +62,7 @@ export default function AdminAuthorApplications() {
   }
 
   if (loading) return <LoadingBlock label="Loading applications…" />;
-  if (error || !data) return <ErrorBlock message={error ?? 'Could not load applications.'} onRetry={reload} />;
+  if (error || !data || !pageData) return <ErrorBlock message={error ?? 'Could not load applications.'} onRetry={reload} />;
 
   return (
     <div>
@@ -117,6 +123,7 @@ export default function AdminAuthorApplications() {
         ))}
       </div>
       )}
+      <Pager meta={pageData} onPage={setPage} disabled={refreshing} />
     </div>
   );
 }

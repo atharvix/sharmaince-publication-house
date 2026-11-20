@@ -1,50 +1,54 @@
 .card {
   display: block;
-  border-radius: var(--radius-md);
-  transition: transform var(--duration-base) var(--ease-out);
-}
-
-.card:hover {
-  transform: translateY(-6px);
+  color: inherit;
 }
 
 .coverWrap {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--duration-base) var(--ease-standard);
+  position: relative;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--duration-slow) var(--ease-out), box-shadow var(--duration-slow) var(--ease-out);
 }
 
+/* The cover lifts off the page and tilts, like picking a book up from the pile */
 .card:hover .coverWrap {
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px) rotate(-1.5deg);
+  box-shadow: 0 8px 0 var(--color-ink-900);
 }
 
-.coverWrap > * {
-  transition: transform var(--duration-slow) var(--ease-out);
+.card:nth-child(even):hover .coverWrap {
+  transform: translateY(-4px) rotate(1.5deg);
 }
 
-.card:hover .coverWrap > * {
-  transform: scale(1.035);
+/* A round sticker, stuck on slightly askew */
+.sticker {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: var(--line);
+  background: var(--color-accent-500);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--color-ink-900);
+  transform: rotate(12deg);
 }
 
 .meta {
   padding-top: var(--space-4);
 }
 
-.category {
-  font-size: var(--fs-xs);
-  color: var(--color-primary-600);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.title {
+  font-size: var(--fs-base);
+  line-height: 1.3;
 }
 
-.title {
-  margin-top: var(--space-1);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--color-ink-900);
-  line-height: 1.3;
+.card:hover .title {
+  background: linear-gradient(transparent 60%, var(--color-accent-500) 60%);
 }
 
 .author {
@@ -58,31 +62,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .price {
-  font-weight: 700;
-  color: var(--color-ink-900);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  color: var(--color-primary-700);
 }
 
 .availability {
   font-size: var(--fs-xs);
-  font-weight: 600;
-  padding: 0.2em 0.65em;
+  font-weight: 800;
+  padding: 0.25em 0.65em;
+  border: 1.5px solid var(--color-ink-900);
   border-radius: var(--radius-full);
 }
 
 .inStock {
-  color: var(--color-success);
-  background: var(--color-success-bg);
+  background: var(--color-green-500);
 }
 
 .preOrder {
-  color: var(--color-accent-700);
-  background: var(--color-accent-100);
+  background: var(--color-accent-500);
 }
 
 .outOfStock {
-  color: var(--color-error);
-  background: var(--color-error-bg);
+  background: var(--color-paper-100);
+  color: var(--color-ink-700);
 }

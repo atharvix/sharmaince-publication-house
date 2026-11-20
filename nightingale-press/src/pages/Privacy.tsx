@@ -25,7 +25,7 @@ export default function Privacy() {
       updated="1 October 2026"
       intro={
         <p>
-          This policy explains what personal data Nightingale Academic Press collects, why we
+          This policy explains what personal data Sharmiance Publication House & Distribution collects, why we
           collect it, how it is used and protected, and the choices available to you. This is a
           sample policy for a public-catalogue preview — final wording requires approval before
           launch.

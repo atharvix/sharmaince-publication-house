@@ -58,7 +58,7 @@ export default function Terms() {
           body: (
             <p>
               All catalogue content, cover designs and website content are the property of
-              Nightingale Academic Press or its licensors and may not be reproduced without
+              Sharmiance Publication House & Distribution or its licensors and may not be reproduced without
               permission.
             </p>
           ),
@@ -68,7 +68,7 @@ export default function Terms() {
           heading: 'Limitation of liability',
           body: (
             <p>
-              To the extent permitted by law, Nightingale Academic Press is not liable for indirect
+              To the extent permitted by law, Sharmiance Publication House & Distribution is not liable for indirect
               or consequential losses arising from use of this website.
             </p>
           ),

@@ -1,4 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Clock, Mail, MapPin, Phone } from 'lucide-react';
+import { SITE_CONTACT } from '../lib/site';
 import { PageHero } from '../components/ui/PageHero';
 import { Reveal } from '../components/ui/Reveal';
 import { Button } from '../components/ui/Button';
@@ -8,13 +11,20 @@ import { api, ApiError } from '../lib/api';
 import styles from './Contact.module.css';
 
 const INFO = [
-  { icon: '✉', label: 'Email', value: 'hello@nightingalepress.example' },
-  { icon: '☎', label: 'Phone', value: '+91 (0) 80-4567-1230' },
-  { icon: '📍', label: 'Editorial Office', value: 'MG Road, Bengaluru, Karnataka, India' },
-  { icon: '🕐', label: 'Hours', value: 'Mon–Sat, 9:30 AM – 6:00 PM IST' },
-];
+  { icon: Mail, label: 'Email', value: SITE_CONTACT.email },
+  { icon: Phone, label: 'Phone', value: SITE_CONTACT.phone },
+  { icon: MapPin, label: 'Editorial office', value: SITE_CONTACT.office },
+  { icon: Clock, label: 'Hours', value: SITE_CONTACT.hours },
+].filter((item): item is typeof item & { value: string } => item.value !== null);
+
+const REASONS = ['order', 'catalogue', 'inspection', 'partnership', 'other'];
 
 export default function Contact() {
+  const [searchParams] = useSearchParams();
+  // Book pages link here as ?reason=inspection&title=… so faculty don't retype the title.
+  const presetReason = REASONS.includes(searchParams.get('reason') ?? '') ? searchParams.get('reason')! : '';
+  const presetTitle = searchParams.get('title');
+  const presetMessage = presetReason === 'inspection' && presetTitle ? `I'd like an inspection copy of "${presetTitle}" for my course.` : '';
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -42,19 +52,22 @@ export default function Contact() {
   return (
     <>
       <PageHero
-        title="Contact Us"
-        subtitle="Questions about an order, a title, or working with us? We read every message."
-        trail={[{ label: 'Contact Us' }]}
+        title="Contact us"
+        subtitle="Questions about an order, a title, or working with us? Send a message and we'll reply by email."
+        trail={[{ label: 'Contact' }]}
       />
 
       <div className="container">
         <div className={styles.layout}>
           <Reveal>
             <div className={styles.infoList}>
-              {INFO.map((item) => (
+              {INFO.length === 0 && (
+                <p className={styles.infoValue}>Send us a message with the form and our team will reply by email.</p>
+              )}
+              {INFO.map(({ icon: Icon, ...item }) => (
                 <div className={styles.infoItem} key={item.label}>
                   <div className={styles.infoIcon} aria-hidden="true">
-                    {item.icon}
+                    <Icon size={20} strokeWidth={1.75} />
                   </div>
                   <div>
                     <p className={styles.infoLabel}>{item.label}</p>
@@ -69,7 +82,7 @@ export default function Contact() {
             {submitted ? (
               <SuccessPanel
                 title="Message sent"
-                body="Thank you for reaching out — our team typically responds within one business day."
+                body="Thanks for getting in touch. We'll reply to the email address you gave."
                 resetLabel="Send another message"
                 onReset={() => setSubmitted(false)}
               />
@@ -79,16 +92,17 @@ export default function Contact() {
                   <InputField id="contact-name" name="name" label="Full name" required placeholder="Your name" />
                   <InputField id="contact-email" name="email" type="email" label="Email address" required placeholder="you@example.com" />
                 </div>
-                <SelectField id="contact-reason" name="reason" label="Reason for contact" required defaultValue="">
+                <SelectField id="contact-reason" name="reason" label="Reason for contact" required defaultValue={presetReason}>
                   <option value="" disabled>
                     Select a reason
                   </option>
                   <option value="order">Order or delivery question</option>
                   <option value="catalogue">Catalogue or title availability</option>
+                  <option value="inspection">Inspection copy for a course</option>
                   <option value="partnership">Institutional partnership</option>
                   <option value="other">Something else</option>
                 </SelectField>
-                <TextareaField id="contact-message" name="message" label="Message" required placeholder="How can we help?" />
+                <TextareaField id="contact-message" name="message" label="Message" required placeholder="How can we help?" defaultValue={presetMessage} />
                 {error && <p style={{ color: 'var(--color-error)', fontSize: 'var(--fs-sm)' }}>{error}</p>}
                 <Button type="submit" size="lg" variant="primary" disabled={submitting}>
                   {submitting ? 'Sending…' : 'Send Message'}

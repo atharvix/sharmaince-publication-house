@@ -1,37 +1,32 @@
 import { Link } from 'react-router-dom';
+import { ArrowRight, type LucideIcon } from 'lucide-react';
 import styles from './HubLinks.module.css';
 
 export interface HubLink {
   to: string;
-  icon: string;
+  icon: LucideIcon;
   title: string;
   description: string;
 }
 
+/** A ruled index of related pages, like the contents page of a handbook. */
 export function HubLinks({ links }: { links: HubLink[] }) {
   return (
-    <div className={styles.grid}>
-      {links.map((link) => (
-        <Link key={link.to} to={link.to} className={styles.card}>
-          <div className={styles.icon} aria-hidden="true">
-            {link.icon}
-          </div>
-          <h3 className={styles.title}>{link.title}</h3>
-          <p className={styles.description}>{link.description}</p>
-          <span className={styles.arrow}>
-            Learn more
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M5 12h14M13 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-        </Link>
+    <ul className={styles.list}>
+      {links.map(({ to, icon: Icon, title, description }) => (
+        <li key={to}>
+          <Link to={to} className={styles.row}>
+            <span className={styles.icon} aria-hidden="true">
+              <Icon size={22} strokeWidth={1.75} />
+            </span>
+            <span className={styles.text}>
+              <span className={styles.title}>{title}</span>
+              <span className={styles.description}>{description}</span>
+            </span>
+            <ArrowRight className={styles.arrow} size={20} strokeWidth={2} aria-hidden="true" />
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

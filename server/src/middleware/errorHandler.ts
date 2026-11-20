@@ -8,17 +8,17 @@ export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: `No route for ${req.method} ${req.path}` } });
 }
 
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     const details = err.details instanceof ZodError ? err.details.flatten() : err.details;
     return res.status(err.status).json({ error: { code: err.code, message: err.message, details } });
   }
 
-  // express.json()/express.raw() reject malformed bodies with a SyntaxError that
-  // carries an HTTP status (usually 400) — surface that instead of a generic 500.
-  if (err instanceof SyntaxError && 'status' in err && typeof (err as { status?: unknown }).status === 'number') {
-    const status = (err as { status: number }).status;
-    return res.status(status).json({ error: { code: 'BAD_REQUEST', message: 'The request body is not valid JSON' } });
+  // express.json()/express.raw() reject malformed or oversized bodies with an error that
+  // carries an HTTP status — surface that instead of a generic 500.
+  if (typeof err === 'object' && err !== null && 'type' in err && 'status' in err && typeof err.status === 'number') {
+    const message = err.type === 'entity.too.large' ? 'The request body is too large' : 'The request body is not valid JSON';
+    return res.status(err.status).json({ error: { code: 'BAD_REQUEST', message } });
   }
 
   if (err instanceof MulterError) {
@@ -33,8 +33,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Resource not found' } });
     }
+    if (err.code === 'P2003') {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'A referenced record does not exist' } });
+    }
   }
 
-  console.error(err);
+  // pino-http attaches the request-scoped logger, so this line carries the request id.
+  req.log.error({ err }, 'unhandled error');
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } });
 }

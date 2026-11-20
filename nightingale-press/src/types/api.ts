@@ -27,6 +27,8 @@ export interface ApiAuthor extends ApiAuthorRef {
 }
 
 export type ApiAvailability = 'IN_STOCK' | 'PRE_ORDER' | 'OUT_OF_STOCK';
+export type HeroColor = 'blue' | 'pink' | 'green' | 'purple' | 'orange';
+
 export type ApiFormat = 'PAPERBACK' | 'HARDBOUND' | 'EBOOK';
 
 export interface ApiBook {
@@ -34,12 +36,12 @@ export interface ApiBook {
   slug: string;
   title: string;
   subtitle: string | null;
-  price: number;
+  price: number | null;
   currency: string;
-  edition: string;
+  edition: string | null;
   format: ApiFormat;
-  isbn: string;
-  pages: number;
+  isbn: string | null;
+  pages: number | null;
   availability: ApiAvailability;
   inStock: boolean;
   description: string;
@@ -48,6 +50,9 @@ export interface ApiBook {
   coverImageUrl: string | null;
   featured: boolean;
   newRelease: boolean;
+  heroOrder: number | null;
+  heroNote: string | null;
+  heroColor: HeroColor | null;
   category: ApiCategory;
   authors: ApiAuthorRef[];
 }

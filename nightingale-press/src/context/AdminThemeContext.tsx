@@ -3,9 +3,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 export type AdminTheme = 'forest-brass' | 'midnight-ink' | 'ivory-burgundy';
 
 export const ADMIN_THEMES: { id: AdminTheme; label: string; description: string }[] = [
-  { id: 'forest-brass', label: 'Forest & Brass', description: 'The house palette — deep pine green with warm brass accents.' },
-  { id: 'midnight-ink', label: 'Midnight Ink', description: 'A dark, ink-on-black workspace for low-light sessions.' },
-  { id: 'ivory-burgundy', label: 'Ivory & Burgundy', description: 'Classic literary elegance — warm ivory with deep burgundy.' },
+  { id: 'forest-brass', label: 'Paper', description: 'The public site’s own look: warm paper and ink.' },
+  { id: 'midnight-ink', label: 'Night', description: 'A dark workspace for low-light sessions.' },
+  { id: 'ivory-burgundy', label: 'Ivory', description: 'Warmer paper with a deep burgundy accent.' },
 ];
 
 const STORAGE_KEY = 'nightingale-admin-theme';
